@@ -1,0 +1,35 @@
+cli/cli.go
+  e93c4510c8646995 17,74-83,94-104
+TESTING.md
+  e93c4510c8646995 1-116
+examples/todo/usecases_test.go
+  e93c4510c8646995 1-114
+testing/harness.go
+  e93c4510c8646995 1-206
+.github/workflows/ci.yml
+  e93c4510c8646995 1-35
+app.go
+  e93c4510c8646995 55,58-61
+testing.go
+  e93c4510c8646995 1-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "fcf01071eee9ec16ddbe52d789e06ae83ebba57e",
+  "prompts": {
+    "e93c4510c8646995": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "92809005-0e6c-41e7-a931-f9dd58bb8c15",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 522,
+      "total_deletions": 10,
+      "accepted_lines": 521,
+      "overriden_lines": 0
+    }
+  }
+}
