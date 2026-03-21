@@ -1,0 +1,36 @@
+# appbase Development Environment
+#
+# Two services:
+#   workspace - Go development (or use host Go)
+#   frontend  - Node/pnpm for frontend tooling
+#
+# Apps extend this with their own docker-compose.override.yml
+
+services:
+  # Go workspace — optional, can use host Go instead
+  workspace:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile.workspace
+    volumes:
+      - ..:/workspace:cached
+      - go-mod-cache:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+    environment:
+      - CGO_ENABLED=1
+    command: sleep infinity
+
+  # Frontend tooling — Node, pnpm, codegen
+  frontend:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile.frontend
+    volumes:
+      - ..:/app:cached
+      - pnpm-store:/root/.local/share/pnpm/store
+    command: sleep infinity
+
+volumes:
+  go-mod-cache:
+  go-build-cache:
+  pnpm-store:

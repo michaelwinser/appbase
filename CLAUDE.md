@@ -57,6 +57,11 @@ appbase/
 │   └── config.go          # Layered config: env vars → defaults (future: files, secrets)
 ├── cli/                   # CLI base
 │   └── cli.go             # Cobra root command, serve/version, app command helper
+├── .devcontainer/         # Development containers
+│   ├── devcontainer.json  # VS Code / Codespaces config
+│   ├── docker-compose.yml # workspace (Go) + frontend (Node) services
+│   ├── Dockerfile.workspace  # Go + SQLite + oapi-codegen
+│   └── Dockerfile.frontend   # Node + pnpm + openapi-typescript
 ├── examples/              # Example apps
 │   └── todo/              # Complete todo app using all capabilities
 │       ├── main.go

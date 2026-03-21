@@ -1,0 +1,35 @@
+# appbase Frontend Development Container
+#
+# Provides: Node.js, pnpm, OpenAPI TypeScript codegen
+# Apps extend this with their framework (Svelte, React, etc.)
+#
+# Usage in app's docker-compose.yml:
+#   frontend-dev:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile.dev
+#       args:
+#         BASE_IMAGE: ghcr.io/michaelwinser/appbase-frontend:latest
+#
+# Or extend directly:
+#   FROM ghcr.io/michaelwinser/appbase-frontend:latest
+#   RUN pnpm add -g svelte-kit
+
+FROM node:20-alpine
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# Install OpenAPI TypeScript codegen
+RUN pnpm add -g openapi-typescript
+
+# Install common development tools
+RUN apk add --no-cache \
+    curl \
+    git \
+    bash
+
+WORKDIR /app
+
+# Default command — apps override this
+CMD ["sh"]

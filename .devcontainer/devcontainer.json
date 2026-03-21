@@ -1,0 +1,22 @@
+{
+  "name": "appbase",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "workspace",
+  "workspaceFolder": "/workspace",
+
+  "features": {},
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go",
+        "svelte.svelte-vscode",
+        "bradlc.vscode-tailwindcss"
+      ]
+    }
+  },
+
+  "forwardPorts": [3000],
+
+  "postCreateCommand": "go mod download"
+}
