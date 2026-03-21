@@ -64,6 +64,24 @@ func main() {
 		r := app.Router()
 		r.Get("/api/todos", listHandler)
 		r.Post("/api/todos", createHandler)
+
+		// Simple root page for the example
+		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/html")
+			w.Write([]byte(`<!DOCTYPE html>
+<html><head><title>Todo - appbase example</title></head>
+<body style="font-family:system-ui;max-width:600px;margin:2rem auto;padding:0 1rem">
+<h1>Todo</h1>
+<p>appbase example app. <a href="/health">/health</a> | <a href="/api/todos">/api/todos</a></p>
+<form onsubmit="event.preventDefault();fetch('/api/todos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:this.t.value})}).then(r=>r.json()).then(()=>{this.t.value='';location.reload()})">
+<input name="t" placeholder="Add a todo..." style="padding:8px;width:70%">
+<button style="padding:8px 16px">Add</button>
+</form>
+<ul id="list"></ul>
+<script>fetch('/api/todos').then(r=>r.json()).then(todos=>{document.getElementById('list').innerHTML=todos.map(t=>'<li>'+t.title+'</li>').join('')}).catch(()=>{})</script>
+</body></html>`))
+		})
+
 		return app.Serve()
 	})
 
