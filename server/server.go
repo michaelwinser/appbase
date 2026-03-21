@@ -31,11 +31,6 @@ func New() *Server {
 	r.Use(middleware.Recoverer)
 	r.Use(apiMiddleware)
 
-	// Health endpoint
-	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		RespondJSON(w, http.StatusOK, map[string]string{"status": "ok"})
-	})
-
 	return &Server{router: r, port: port}
 }
 

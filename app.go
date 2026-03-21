@@ -52,8 +52,13 @@ func New(config Config) (*App, error) {
 	// Initialize server
 	srv := server.New()
 
-	// Register auth middleware
+	// Register auth middleware (must be before any routes)
 	srv.Router().Use(auth.Middleware(sessions, nil))
+
+	// Health endpoint
+	srv.Router().Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		server.RespondJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	})
 
 	app := &App{
 		db:       database,

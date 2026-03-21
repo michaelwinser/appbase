@@ -14,6 +14,7 @@ package cli
 import (
 	"fmt"
 	"os"
+	"os/exec"
 
 	"github.com/spf13/cobra"
 )
@@ -66,12 +67,19 @@ func (c *CLI) addBuiltinCommands() {
 			if err := c.setupFn(); err != nil {
 				return err
 			}
-			// The serve implementation is provided by the app via setupFn
-			// which initializes the app and starts serving.
-			// This is a placeholder — the app overrides this.
 			return fmt.Errorf("serve not implemented — override with cli.SetServeFunc()")
 		},
 	})
+
+	// test — run all tests (for CI)
+	testCmd := &cobra.Command{
+		Use:   "test",
+		Short: "Run all tests (unit, use case, integration)",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runTests(args)
+		},
+	}
+	c.root.AddCommand(testCmd)
 
 	// version — print version info
 	c.root.AddCommand(&cobra.Command{
@@ -81,6 +89,19 @@ func (c *CLI) addBuiltinCommands() {
 			fmt.Printf("%s (built with appbase)\n", c.root.Use)
 		},
 	})
+}
+
+// runTests executes `go test ./...` or a specific package.
+func runTests(args []string) error {
+	target := "./..."
+	if len(args) > 0 {
+		target = args[0]
+	}
+
+	cmd := exec.Command("go", "test", "-v", "-count=1", target)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 // SetServeFunc sets the function called by the "serve" command.
