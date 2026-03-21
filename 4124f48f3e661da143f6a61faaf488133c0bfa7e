@@ -1,0 +1,51 @@
+db/db.go
+  e93c4510c8646995 1-83
+auth/session.go
+  e93c4510c8646995 1-116
+auth/google.go
+  e93c4510c8646995 1-251
+db/sqlite.go
+  e93c4510c8646995 1-25
+CLAUDE.md
+  e93c4510c8646995 1-158
+go.mod
+  e93c4510c8646995 1-3
+examples/todo/store.go
+  e93c4510c8646995 1-68
+db/db_test.go
+  e93c4510c8646995 1-65
+server/server.go
+  e93c4510c8646995 1-86
+app.go
+  e93c4510c8646995 1-194
+auth/session_test.go
+  e93c4510c8646995 1-101
+auth/middleware.go
+  e93c4510c8646995 1-85
+.gitignore
+  e93c4510c8646995 1-14
+examples/todo/main.go
+  e93c4510c8646995 1-100
+hyrums/README.md
+  e93c4510c8646995 1-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "4124f48f3e661da143f6a61faaf488133c0bfa7e",
+  "prompts": {
+    "e93c4510c8646995": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "92809005-0e6c-41e7-a931-f9dd58bb8c15",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 1399,
+      "total_deletions": 0,
+      "accepted_lines": 1399,
+      "overriden_lines": 0
+    }
+  }
+}
