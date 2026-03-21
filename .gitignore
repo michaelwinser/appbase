@@ -2,6 +2,10 @@
 data/
 *.db
 
+# Environment (secrets)
+.env
+.env.local
+
 # IDE
 .idea/
 .vscode/

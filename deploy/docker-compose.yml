@@ -1,0 +1,32 @@
+# appbase Application Runtime Compose
+#
+# For running apps locally or on TrueNAS Docker.
+# Separate from .devcontainer/ (which is for development).
+#
+# Usage:
+#   docker compose -f deploy/docker-compose.yml up
+#
+# Apps should copy and customize this file.
+# Use portmanager to allocate ports (see project CLAUDE.md).
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    ports:
+      - "${PORT_1:-3000}:8080"
+    volumes:
+      - app-data:/app/data
+    environment:
+      - PORT=8080
+      - STORE_TYPE=${STORE_TYPE:-sqlite}
+      - SQLITE_DB_PATH=/app/data/app.db
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - GOOGLE_REDIRECT_URL=${GOOGLE_REDIRECT_URL:-}
+      - ALLOWED_USERS=${ALLOWED_USERS:-}
+    restart: unless-stopped
+
+volumes:
+  app-data:

@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -24,7 +25,7 @@ func setupTestApp(t *testing.T) http.Handler {
 		os.Unsetenv("SQLITE_DB_PATH")
 	})
 
-	a, err := appbase.New(appbase.Config{})
+	a, err := appbase.New(appbase.Config{Name: "Todo"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +35,7 @@ func setupTestApp(t *testing.T) http.Handler {
 		t.Fatal(err)
 	}
 
-	s := &TodoStore{db: a.DB()}
+	s := NewTodoStore(a.DB())
 
 	r := a.Server().Router()
 	r.Get("/api/todos", func(w http.ResponseWriter, r *http.Request) {
@@ -43,6 +44,7 @@ func setupTestApp(t *testing.T) http.Handler {
 	r.Post("/api/todos", func(w http.ResponseWriter, r *http.Request) {
 		createHandler(w, r)
 	})
+	r.Get("/", a.LoginPage(nil))
 
 	// Need to set the package-level store for handlers
 	store = s
@@ -110,5 +112,24 @@ func TestUseCases(t *testing.T) {
 		resp := c.GET("/health")
 		c.AssertStatus(resp, 200)
 		c.AssertJSONHas(resp, "status", "ok")
+	})
+
+	h.Run("UC-0008", "Root page shows login when unauthenticated", func(c *harness.Client) {
+		resp := c.GET("/")
+		c.AssertStatus(resp, 200)
+		body := string(resp.Body)
+		if !strings.Contains(body, "Todo") || !strings.Contains(body, "<!DOCTYPE html>") {
+			t.Fatal("expected login page HTML")
+		}
+	})
+
+	h.Run("UC-0009", "Root page shows content when authenticated", func(c *harness.Client) {
+		login(c)
+		resp := c.GET("/")
+		c.AssertStatus(resp, 200)
+		body := string(resp.Body)
+		if !strings.Contains(body, "Signed in as") {
+			t.Fatal("expected authenticated content with 'Signed in as'")
+		}
 	})
 }

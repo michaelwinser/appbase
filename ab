@@ -44,6 +44,7 @@ cmd_test() {
         all)
             info "Running all tests..."
             go test -v -count=1 ./...
+            sh "$SCRIPT_DIR/deploy/deploy_test.sh"
             success "All tests passed"
             ;;
         unit)
@@ -60,8 +61,13 @@ cmd_test() {
             go test -v ./examples/todo/...
             success "Example tests passed"
             ;;
+        deploy)
+            info "Running deploy script tests..."
+            sh "$SCRIPT_DIR/deploy/deploy_test.sh"
+            success "Deploy tests passed"
+            ;;
         *)
-            echo "Usage: ./ab test [all|unit|hyrums|example]"
+            echo "Usage: ./ab test [all|unit|hyrums|example|deploy]"
             ;;
     esac
 }
@@ -69,6 +75,11 @@ cmd_test() {
 cmd_run() {
     info "Running todo example..."
     mkdir -p data
+    if [ -f "$SCRIPT_DIR/.env" ]; then
+        set -a
+        . "$SCRIPT_DIR/.env"
+        set +a
+    fi
     go run ./examples/todo "$@"
 }
 
@@ -107,12 +118,163 @@ cmd_devcontainer() {
     esac
 }
 
+cmd_init() {
+    config="app.json"
+
+    # Read existing values if app.json exists
+    if [ -f "$config" ]; then
+        . "$SCRIPT_DIR/deploy/deploy.sh"
+        cur_name="$(app_name)"
+        cur_project="$(app_gcp_project)"
+        cur_region="$(app_region)"
+        info "Updating existing $config"
+    else
+        cur_name=""
+        cur_project=""
+        cur_region="us-central1"
+        info "Creating $config"
+    fi
+
+    # Prompt for each value, showing current/default
+    printf "App name [${cur_name:-my-app}]: "
+    read -r input_name
+    name="${input_name:-${cur_name:-my-app}}"
+
+    printf "GCP project ID [${cur_project:-}]: "
+    read -r input_project
+    project="${input_project:-${cur_project}}"
+
+    printf "Region [${cur_region:-us-central1}]: "
+    read -r input_region
+    region="${input_region:-${cur_region:-us-central1}}"
+
+    # Build urls array — keep existing URLs if present, otherwise default
+    if [ -f "$config" ]; then
+        # Preserve existing urls block from the file
+        existing_urls=$(sed -n '/\"urls\"/,/\]/p' "$config")
+    fi
+
+    if [ -z "$existing_urls" ]; then
+        urls_block="  \"urls\": [
+    \"http://localhost:3000\"
+  ]"
+    else
+        urls_block="$existing_urls"
+    fi
+
+    # Write app.json
+    cat > "$config" <<EOF
+{
+  "name": "$name",
+  "gcpProject": "$project",
+  "region": "$region",
+  $urls_block
+}
+EOF
+
+    success "Wrote $config"
+    cat "$config"
+}
+
 cmd_ci() {
     info "Running full CI pipeline..."
     cmd_lint
     cmd_build
     cmd_test all
     success "CI pipeline passed"
+}
+
+cmd_provision() {
+    . "$SCRIPT_DIR/deploy/deploy.sh"
+
+    # Read name and project from app.json; only email is required as arg
+    email="${1:-}"
+    billing="${2:-}"
+    project="$(app_gcp_project)"
+    app="$(app_name)"
+
+    if [ -z "$email" ]; then
+        cat <<USAGE
+Usage: ./ab provision <support-email> [billing-account]
+
+Full GCP provisioning: project creation, billing, APIs, Firestore, OAuth.
+Reads name and gcpProject from app.json.
+
+  Current app.json:
+    name:       ${app:-<not set>}
+    gcpProject: ${project:-<not set>}
+
+Example:
+  ./ab provision user@example.com
+USAGE
+        exit 1
+    fi
+
+    if [ -z "$project" ] || [ -z "$app" ]; then
+        error "app.json must have 'name' and 'gcpProject' set before provisioning."
+    fi
+
+    provision_gcp "$project" "$app" "$email" "$billing"
+
+    # Save GCP project ID back to app.json if it was empty
+    current_gcp=$(app_gcp_project)
+    if [ -z "$current_gcp" ] && [ -f app.json ]; then
+        sed -i'' -e "s/\"gcpProject\": \"\"/\"gcpProject\": \"$project\"/" app.json
+        info "Saved gcpProject=$project to app.json"
+    fi
+}
+
+cmd_deploy() {
+    . "$SCRIPT_DIR/deploy/deploy.sh"
+
+    # Source .env for OAuth credentials if present
+    if [ -f "$SCRIPT_DIR/.env" ]; then
+        set -a
+        . "$SCRIPT_DIR/.env"
+        set +a
+    fi
+
+    # Read from app.json, allow CLI overrides
+    name="${1:-$(app_name)}"
+    project="${2:-$(app_gcp_project)}"
+    region="${3:-$(app_region)}"
+
+    if [ -z "$name" ] || [ -z "$project" ]; then
+        echo "Usage: ./ab deploy [name] [gcp-project] [region]"
+        echo ""
+        echo "Reads defaults from app.json. Set gcpProject there or pass as arguments."
+        exit 1
+    fi
+
+    deploy_cloudrun "$name" "$project" "$region"
+}
+
+cmd_deploy_status() {
+    . "$SCRIPT_DIR/deploy/deploy.sh"
+
+    name="${1:-$(app_name)}"
+    project="${2:-$(app_gcp_project)}"
+    region="${3:-$(app_region)}"
+
+    if [ -z "$name" ] || [ -z "$project" ]; then
+        echo "Usage: ./ab deploy-status [name] [gcp-project] [region]"
+        echo ""
+        echo "Reads defaults from app.json. Set gcpProject there or pass as arguments."
+        exit 1
+    fi
+
+    deploy_cloudrun_status "$name" "$project" "$region"
+}
+
+cmd_docker() {
+    . "$SCRIPT_DIR/deploy/deploy.sh"
+    action="${1:-up}"
+    case "$action" in
+        up)    deploy_docker_up ;;
+        down)  deploy_docker_down ;;
+        logs)  deploy_docker_logs ;;
+        *)     echo "Usage: ./ab docker [up|down|logs]" ;;
+    esac
 }
 
 cmd_help() {
@@ -133,6 +295,13 @@ Example App:
   run add "title"      Add a todo via CLI
   run list             List todos via CLI
 
+Deployment (reads name/project from app.json):
+  init                               Create or update app.json (interactive)
+  provision <email>                  Full GCP setup (project, billing, APIs, OAuth)
+  deploy                             Deploy to Cloud Run
+  deploy-status                      Show deployment status
+  docker [up|down|logs]              Run app in local Docker container
+
 Devcontainer:
   devcontainer build   Build development containers
   devcontainer up      Start development containers
@@ -145,9 +314,10 @@ Other:
 Examples:
   ./ab test                    # Run all tests
   ./ab test unit               # Run just unit tests
-  ./ab test hyrums             # Run consumer contract tests
   ./ab run serve               # Start the todo example server
-  ./ab run add "Buy milk"      # Add a todo via CLI
+  ./ab provision me@example.com  # Full GCP setup
+  ./ab deploy my-project       # Deploy to Cloud Run
+  ./ab docker up               # Run locally in Docker
   ./ab ci                      # Full CI pipeline
 EOF
 }
@@ -160,11 +330,16 @@ command="${1:-help}"
 shift 2>/dev/null || true
 
 case "$command" in
+    init)           cmd_init "$@" ;;
     build)          cmd_build "$@" ;;
     test)           cmd_test "$@" ;;
     run)            cmd_run "$@" ;;
     lint)           cmd_lint "$@" ;;
     ci)             cmd_ci "$@" ;;
+    provision)      cmd_provision "$@" ;;
+    deploy)         cmd_deploy "$@" ;;
+    deploy-status)  cmd_deploy_status "$@" ;;
+    docker)         cmd_docker "$@" ;;
     devcontainer)   cmd_devcontainer "$@" ;;
     help|--help|-h) cmd_help ;;
     *)              error "Unknown command: $command. Run './ab help' for usage." ;;

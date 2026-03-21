@@ -84,7 +84,7 @@ func (g *GoogleAuth) GetRedirectURL(r *http.Request) string {
 	if r.TLS == nil && r.Header.Get("X-Forwarded-Proto") != "https" {
 		scheme = "http"
 	}
-	return fmt.Sprintf("%s://%s/oauth/google/callback", scheme, r.Host)
+	return fmt.Sprintf("%s://%s/api/auth/callback", scheme, r.Host)
 }
 
 // LoginURL returns the Google OAuth login URL.

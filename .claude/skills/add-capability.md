@@ -30,6 +30,8 @@ Define the exported types and functions first. Write the Go interface or functio
 - Follow existing patterns (see similar code in the package)
 - Use the `config` package for any new configuration
 - Environment variables follow the convention: `dot.notation` → `DOT_NOTATION`
+- If adding a new store backend: implement `db/preflight.go` support so the startup check covers it
+- If adding anything that touches both SQL and Firestore: follow the backend interface pattern (see `auth/session.go` and `examples/todo/store.go`)
 
 ### 3. Add Tests
 

@@ -19,10 +19,14 @@ type App struct {
 	sessions *auth.SessionStore
 	google   *auth.GoogleAuth
 	server   *server.Server
+	name     string
 }
 
 // Config configures an appbase application.
 type Config struct {
+	// Name is the application name, shown on the login page.
+	Name string
+
 	// GoogleAuth configures Google OAuth. Nil to use defaults.
 	GoogleAuth *auth.GoogleAuthConfig
 }
@@ -33,6 +37,12 @@ func New(config Config) (*App, error) {
 	database, err := db.New()
 	if err != nil {
 		return nil, fmt.Errorf("initializing database: %w", err)
+	}
+
+	// Preflight check — verify the backend is functional
+	if err := database.Preflight(); err != nil {
+		database.Close()
+		return nil, fmt.Errorf("database preflight failed: %w", err)
 	}
 
 	// Initialize sessions
@@ -60,11 +70,17 @@ func New(config Config) (*App, error) {
 		server.RespondJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
 
+	name := config.Name
+	if name == "" {
+		name = "App"
+	}
+
 	app := &App{
 		db:       database,
 		sessions: sessions,
 		google:   google,
 		server:   srv,
+		name:     name,
 	}
 
 	// Register auth routes
@@ -170,10 +186,7 @@ func (a *App) registerAuthRoutes() {
 		}
 
 		a.google.SetSessionCookie(w, r, result.Session.ID)
-		server.RespondJSON(w, http.StatusOK, map[string]interface{}{
-			"loggedIn": true,
-			"email":    result.Email,
-		})
+		http.Redirect(w, r, "/", http.StatusFound)
 	})
 
 	// Logout
@@ -184,6 +197,31 @@ func (a *App) registerAuthRoutes() {
 		auth.ClearSessionCookie(w)
 		server.RespondJSON(w, http.StatusOK, map[string]string{"ok": "true"})
 	})
+}
+
+// LoginPage returns an HTTP handler that shows a login page when the user
+// is not authenticated, and calls next when they are. If next is nil,
+// a default welcome page is shown for authenticated users.
+func (a *App) LoginPage(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if auth.UserID(r) == "" {
+			auth.ServeLoginPage(w, r, a.name, a.google)
+			return
+		}
+		if next != nil {
+			next(w, r)
+			return
+		}
+		// Default authenticated page
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		fmt.Fprintf(w, `<!DOCTYPE html>
+<html><head><title>%s</title></head>
+<body style="font-family:system-ui;max-width:600px;margin:2rem auto;padding:0 1rem">
+<h1>%s</h1>
+<p>Signed in as %s</p>
+<form method="POST" action="/api/auth/logout"><button>Sign out</button></form>
+</body></html>`, a.name, a.name, auth.Email(r))
+	}
 }
 
 // UserID returns the authenticated user's ID from the request context.

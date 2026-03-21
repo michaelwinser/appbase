@@ -1,0 +1,9 @@
+{
+  "name": "appbase-todo",
+  "gcpProject": "xwind-appbase",
+  "region": "us-central1",
+  "urls": [
+    "http://localhost:3000",
+    "https://appbase-todo-n5k7xcrivq-uc.a.run.app"
+  ]
+}

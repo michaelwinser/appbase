@@ -48,7 +48,10 @@ appbase/
 │   └── firestore.go       # Firestore connection
 ├── auth/                  # Authentication
 │   ├── google.go          # Google OAuth flow
-│   ├── session.go         # Session entity + store
+│   ├── login.go           # Built-in login page
+│   ├── session.go         # Session entity + store interface
+│   ├── session_sql.go     # SQL session backend
+│   ├── session_firestore.go # Firestore session backend
 │   └── middleware.go      # HTTP auth middleware
 ├── server/                # HTTP server
 │   ├── server.go          # Router setup, health, CORS
@@ -62,12 +65,24 @@ appbase/
 │   ├── docker-compose.yml # workspace (Go) + frontend (Node) services
 │   ├── Dockerfile.workspace  # Go + SQLite + oapi-codegen
 │   └── Dockerfile.frontend   # Node + pnpm + openapi-typescript
+├── deploy/                # Deployment tooling
+│   ├── deploy.sh          # Entry point — sources all below
+│   ├── config.sh          # app.json reader functions
+│   ├── provision.sh       # GCP provisioning (project, billing, APIs, OAuth)
+│   ├── cloudrun.sh        # Cloud Run deployment
+│   ├── docker.sh          # Local/TrueNAS Docker deployment
+│   ├── Dockerfile         # Multi-stage build template
+│   ├── docker-compose.yml # Runtime compose template
+│   └── deploy_test.sh     # Tests for config/URL functions
 ├── examples/              # Example apps
 │   └── todo/              # Complete todo app using all capabilities
 │       ├── main.go
-│       ├── store.go
-│       ├── handler.go
-│       └── openapi.yaml
+│       ├── store.go        # Store interface + factory
+│       ├── store_sql.go    # SQLite backend
+│       ├── store_firestore.go # Firestore backend
+│       └── usecases_test.go
+├── app.json               # Project identity (name, gcpProject, region, urls)
+├── Dockerfile             # Cloud Run build (builds todo example)
 └── hyrums/                # Consumer contract tests
     └── README.md          # How apps add tests here
 ```
@@ -97,21 +112,32 @@ func main() {
 
 ### 2. Use the database
 
+Apps define stores with a backend interface to support both SQLite and Firestore:
+
 ```go
-// Your app defines its own store using app.DB()
-type MyStore struct {
-    db appbase.DB
+// Define a backend interface for your entity
+type thingBackend interface {
+    List(userID string) ([]Thing, error)
+    Create(thing *Thing) error
 }
 
-func (s *MyStore) CreateThing(thing *Thing) error {
-    // Use the connection appbase provides
-    return s.db.Exec("INSERT INTO things ...")
+// Factory picks the right backend based on STORE_TYPE
+func NewThingStore(d *db.DB) *ThingStore {
+    if d.IsSQL() {
+        return &ThingStore{backend: &sqlThingBackend{db: d}}
+    }
+    return &ThingStore{backend: &firestoreThingBackend{db: d}}
 }
 ```
 
-### 3. Use auth
+See `examples/todo/store.go`, `store_sql.go`, `store_firestore.go` for a complete example.
+
+### 3. Use auth and the login page
 
 ```go
+// Built-in login page: shows Google sign-in when unauthenticated
+r.Get("/", app.LoginPage(myContentHandler))
+
 // Auth middleware is auto-registered. Access the user in handlers:
 func myHandler(w http.ResponseWriter, r *http.Request) {
     userID := appbase.UserID(r)  // from session cookie
@@ -133,6 +159,44 @@ app.CLI().AddCommand(&cobra.Command{
 })
 app.CLI().Execute()
 ```
+
+## Project Config and Deployment
+
+### app.json
+
+Every project has an `app.json` at the repo root:
+```json
+{
+  "name": "my-app",
+  "gcpProject": "my-gcp-project",
+  "region": "us-central1",
+  "urls": ["http://localhost:3000"]
+}
+```
+
+Create with `./ab init`. Deploy scripts read from this file.
+
+### .env
+
+Runtime secrets (gitignored). Created during provisioning:
+```
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+```
+
+`./ab run` and `./ab deploy` source `.env` automatically.
+
+### Deployment targets
+
+| Target | Store | Command |
+|--------|-------|---------|
+| Local | SQLite | `./ab run serve` |
+| Local Docker | SQLite | `./ab docker up` |
+| Cloud Run | Firestore | `./ab deploy` |
+
+### Provisioning
+
+`./ab provision user@example.com` — creates GCP project, enables APIs, creates Firestore DB, validates OAuth credentials. Reads name/project from `app.json`.
 
 ## For AI Sessions (Claude Code)
 
