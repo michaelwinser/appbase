@@ -1,0 +1,171 @@
+#!/bin/sh
+# appbase - Project Command Script
+#
+# Usage: ./ab <command> [options]
+#
+# Run ./ab help for full command list.
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# Colors (disabled if NO_COLOR set or not a terminal)
+if [ -z "$NO_COLOR" ] && [ -t 1 ]; then
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    BLUE='\033[0;34m'
+    NC='\033[0m'
+else
+    RED=''
+    GREEN=''
+    BLUE=''
+    NC=''
+fi
+
+info() { printf "${BLUE}▶${NC} %s\n" "$1"; }
+success() { printf "${GREEN}✓${NC} %s\n" "$1"; }
+error() { printf "${RED}✗${NC} %s\n" "$1" >&2; exit 1; }
+
+# ===========================================
+# Commands
+# ===========================================
+
+cmd_build() {
+    info "Building all packages..."
+    go build ./...
+    success "Build complete"
+}
+
+cmd_test() {
+    target="${1:-all}"
+
+    case "$target" in
+        all)
+            info "Running all tests..."
+            go test -v -count=1 ./...
+            success "All tests passed"
+            ;;
+        unit)
+            info "Running unit tests..."
+            go test -v ./db/... ./auth/... ./config/... ./server/...
+            success "Unit tests passed"
+            ;;
+        hyrums)
+            info "Running consumer contract tests..."
+            go test -v ./hyrums/... 2>/dev/null || echo "No consumer tests yet"
+            ;;
+        example|todo)
+            info "Running todo example tests..."
+            go test -v ./examples/todo/...
+            success "Example tests passed"
+            ;;
+        *)
+            echo "Usage: ./ab test [all|unit|hyrums|example]"
+            ;;
+    esac
+}
+
+cmd_run() {
+    info "Running todo example..."
+    mkdir -p data
+    go run ./examples/todo "$@"
+}
+
+cmd_lint() {
+    info "Running lints..."
+    go vet ./...
+    success "Lint passed"
+}
+
+cmd_devcontainer() {
+    action="${1:-build}"
+    case "$action" in
+        build)
+            info "Building devcontainers..."
+            docker compose -f .devcontainer/docker-compose.yml build
+            success "Devcontainers built"
+            ;;
+        up)
+            info "Starting devcontainers..."
+            docker compose -f .devcontainer/docker-compose.yml up -d
+            success "Devcontainers started"
+            ;;
+        down)
+            info "Stopping devcontainers..."
+            docker compose -f .devcontainer/docker-compose.yml down
+            success "Devcontainers stopped"
+            ;;
+        shell)
+            service="${2:-workspace}"
+            info "Opening shell in ${service}..."
+            docker compose -f .devcontainer/docker-compose.yml exec "$service" sh
+            ;;
+        *)
+            echo "Usage: ./ab devcontainer [build|up|down|shell]"
+            ;;
+    esac
+}
+
+cmd_ci() {
+    info "Running full CI pipeline..."
+    cmd_lint
+    cmd_build
+    cmd_test all
+    success "CI pipeline passed"
+}
+
+cmd_help() {
+    cat <<'EOF'
+appbase - Project Command Script
+
+Usage: ./ab <command> [options]
+
+Development:
+  build                Build all packages
+  test [target]        Run tests (all, unit, hyrums, example)
+  lint                 Run go vet
+  ci                   Run full CI pipeline (lint + build + test)
+
+Example App:
+  run [args]           Run the todo example (e.g., ./ab run serve)
+  run serve            Start todo HTTP server
+  run add "title"      Add a todo via CLI
+  run list             List todos via CLI
+
+Devcontainer:
+  devcontainer build   Build development containers
+  devcontainer up      Start development containers
+  devcontainer down    Stop development containers
+  devcontainer shell   Open shell in workspace container
+
+Other:
+  help                 Show this help message
+
+Examples:
+  ./ab test                    # Run all tests
+  ./ab test unit               # Run just unit tests
+  ./ab test hyrums             # Run consumer contract tests
+  ./ab run serve               # Start the todo example server
+  ./ab run add "Buy milk"      # Add a todo via CLI
+  ./ab ci                      # Full CI pipeline
+EOF
+}
+
+# ===========================================
+# Main
+# ===========================================
+
+command="${1:-help}"
+shift 2>/dev/null || true
+
+case "$command" in
+    build)          cmd_build "$@" ;;
+    test)           cmd_test "$@" ;;
+    run)            cmd_run "$@" ;;
+    lint)           cmd_lint "$@" ;;
+    ci)             cmd_ci "$@" ;;
+    devcontainer)   cmd_devcontainer "$@" ;;
+    help|--help|-h) cmd_help ;;
+    *)              error "Unknown command: $command. Run './ab help' for usage." ;;
+esac

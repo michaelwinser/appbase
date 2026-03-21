@@ -115,7 +115,31 @@ func TestUseCases(t *testing.T) {
 }
 ```
 
-### 7. Add CI
+### 7. Create the Project Script
+
+Create a `./tc` (or app-specific name) script for common operations:
+
+```sh
+#!/bin/sh
+set -e
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
+
+case "${1:-help}" in
+    build)    go build ./... ;;
+    test)     go test -v -count=1 ./... ;;
+    serve)    go run . serve ;;
+    lint)     go vet ./... ;;
+    ci)       go vet ./... && go build ./... && go test -v -count=1 ./... ;;
+    deploy)   # Add deployment commands ;;
+    help)     echo "Usage: ./tc [build|test|serve|lint|ci|deploy|help]" ;;
+    *)        echo "Unknown: $1" >&2; exit 1 ;;
+esac
+```
+
+Make it executable: `chmod +x tc`
+
+### 8. Add CI
 
 Copy the CI workflow from appbase's `.github/workflows/ci.yml` and adapt.
 
