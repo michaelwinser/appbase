@@ -1,0 +1,31 @@
+CLAUDE.md
+  e93c4510c8646995 56-57,59
+config/config.go
+  e93c4510c8646995 1-108
+cli/cli.go
+  e93c4510c8646995 1-115
+examples/todo/main.go
+  e93c4510c8646995 5,7,9,11-13,18,22-23,25,41-48,50,53,55-56,59-60,62-68,70-73,75,77,79-82,84-88,90-92,94-99,101-103,105-124,126-127,129-149
+config/config_test.go
+  e93c4510c8646995 1-94
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "f6a7c3e65a3de3655340dd67541541fea08c406d",
+  "prompts": {
+    "e93c4510c8646995": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "92809005-0e6c-41e7-a931-f9dd58bb8c15",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 423,
+      "total_deletions": 54,
+      "accepted_lines": 422,
+      "overriden_lines": 0
+    }
+  }
+}
