@@ -53,8 +53,10 @@ appbase/
 ├── server/                # HTTP server
 │   ├── server.go          # Router setup, health, CORS
 │   └── respond.go         # JSON response helpers
+├── config/                # Configuration
+│   └── config.go          # Layered config: env vars → defaults (future: files, secrets)
 ├── cli/                   # CLI base
-│   └── cli.go             # Cobra root command, common flags
+│   └── cli.go             # Cobra root command, serve/version, app command helper
 ├── examples/              # Example apps
 │   └── todo/              # Complete todo app using all capabilities
 │       ├── main.go

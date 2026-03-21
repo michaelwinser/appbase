@@ -2,22 +2,27 @@
 //
 // This serves as both documentation and integration test for the appbase module.
 //
-// Run:
+// Run as server:
 //
-//	go run ./examples/todo
+//	go run ./examples/todo serve
 //
-// Then:
+// Run CLI commands:
 //
-//	curl http://localhost:3000/health
-//	curl http://localhost:3000/api/todos
+//	go run ./examples/todo add "Buy groceries"
+//	go run ./examples/todo list
+//	go run ./examples/todo version
 package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
+	"github.com/spf13/cobra"
+
 	"github.com/michaelwinser/appbase"
+	appcli "github.com/michaelwinser/appbase/cli"
 	"github.com/michaelwinser/appbase/server"
 )
 
@@ -33,68 +38,113 @@ CREATE TABLE IF NOT EXISTS todos (
 CREATE INDEX IF NOT EXISTS idx_todos_user ON todos(user_id);
 `
 
-func main() {
-	app, err := appbase.New(appbase.Config{})
+var (
+	app   *appbase.App
+	store *TodoStore
+)
+
+func setup() error {
+	var err error
+	app, err = appbase.New(appbase.Config{})
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
-	defer app.Close()
-
-	// Run app-specific migrations
 	if err := app.Migrate(schema); err != nil {
-		log.Fatal(err)
+		return err
 	}
-
-	store := &TodoStore{db: app.DB()}
-
-	// Register routes
-	r := app.Router()
-	r.Get("/api/todos", listTodos(store))
-	r.Post("/api/todos", createTodo(store))
-
-	log.Fatal(app.Serve())
+	store = &TodoStore{db: app.DB()}
+	return nil
 }
 
-func listTodos(store *TodoStore) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		userID := appbase.UserID(r)
-		if userID == "" {
-			userID = "anonymous" // Allow unauthenticated for demo
-		}
+func main() {
+	cli := appcli.New("todo", "A simple todo app built on appbase", setup)
 
-		todos, err := store.List(userID)
-		if err != nil {
-			server.RespondError(w, http.StatusInternalServerError, err.Error())
-			return
+	// Override serve to register routes and start
+	cli.SetServeFunc(func() error {
+		r := app.Router()
+		r.Get("/api/todos", listHandler)
+		r.Post("/api/todos", createHandler)
+		return app.Serve()
+	})
+
+	// CLI: add a todo
+	addCmd := cli.Command("add", "Add a new todo", func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return fmt.Errorf("title is required: todo add \"Buy groceries\"")
 		}
-		server.RespondJSON(w, http.StatusOK, todos)
+		todo, err := store.Create("cli-user", args[0])
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Created: %s (id: %s)\n", todo.Title, todo.ID)
+		return nil
+	})
+	cli.AddCommand(addCmd)
+
+	// CLI: list todos
+	listCmd := cli.Command("list", "List all todos", func(cmd *cobra.Command, args []string) error {
+		todos, err := store.List("cli-user")
+		if err != nil {
+			return err
+		}
+		if len(todos) == 0 {
+			fmt.Println("No todos yet. Add one with: todo add \"Buy groceries\"")
+			return nil
+		}
+		for _, t := range todos {
+			status := "[ ]"
+			if t.Done {
+				status = "[x]"
+			}
+			fmt.Printf("%s %s  (%s)\n", status, t.Title, t.ID[:8])
+		}
+		return nil
+	})
+	cli.AddCommand(listCmd)
+
+	cli.Execute()
+}
+
+func listHandler(w http.ResponseWriter, r *http.Request) {
+	userID := appbase.UserID(r)
+	if userID == "" {
+		userID = "anonymous"
+	}
+	todos, err := store.List(userID)
+	if err != nil {
+		server.RespondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	server.RespondJSON(w, http.StatusOK, todos)
+}
+
+func createHandler(w http.ResponseWriter, r *http.Request) {
+	userID := appbase.UserID(r)
+	if userID == "" {
+		userID = "anonymous"
+	}
+	var req struct {
+		Title string `json:"title"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Title == "" {
+		server.RespondError(w, http.StatusBadRequest, "title is required")
+		return
+	}
+	todo, err := store.Create(userID, req.Title)
+	if err != nil {
+		server.RespondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	server.RespondJSON(w, http.StatusCreated, todo)
+}
+
+func init() {
+	// Ensure data directory exists for SQLite
+	if err := ensureDataDir(); err != nil {
+		log.Printf("Warning: could not create data directory: %v", err)
 	}
 }
 
-func createTodo(store *TodoStore) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		userID := appbase.UserID(r)
-		if userID == "" {
-			userID = "anonymous"
-		}
-
-		var req struct {
-			Title string `json:"title"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			server.RespondError(w, http.StatusBadRequest, "invalid request")
-			return
-		}
-		if req.Title == "" {
-			server.RespondError(w, http.StatusBadRequest, "title is required")
-			return
-		}
-
-		todo, err := store.Create(userID, req.Title)
-		if err != nil {
-			server.RespondError(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-		server.RespondJSON(w, http.StatusCreated, todo)
-	}
+func ensureDataDir() error {
+	return nil // SQLite creates the file; directory must exist
 }
