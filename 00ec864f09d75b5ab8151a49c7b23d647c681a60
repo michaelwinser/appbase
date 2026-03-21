@@ -1,0 +1,23 @@
+examples/todo/main.go
+  e93c4510c8646995 67-84
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "00ec864f09d75b5ab8151a49c7b23d647c681a60",
+  "prompts": {
+    "e93c4510c8646995": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "92809005-0e6c-41e7-a931-f9dd58bb8c15",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 18,
+      "total_deletions": 0,
+      "accepted_lines": 18,
+      "overriden_lines": 0
+    }
+  }
+}
