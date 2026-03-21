@@ -1,0 +1,33 @@
+.devcontainer/Dockerfile.workspace
+  e93c4510c8646995 1-24
+.devcontainer/Dockerfile.frontend
+  e93c4510c8646995 1-35
+.devcontainer/devcontainer.json
+  e93c4510c8646995 1-22
+.claude/skills/change-toolchain.md
+  e93c4510c8646995 1-97
+CLAUDE.md
+  e93c4510c8646995 60-64
+.devcontainer/docker-compose.yml
+  e93c4510c8646995 1-36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "c967619fb03564da0f2a3f18bbac3d776d21d8c0",
+  "prompts": {
+    "e93c4510c8646995": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "92809005-0e6c-41e7-a931-f9dd58bb8c15",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 219,
+      "total_deletions": 0,
+      "accepted_lines": 219,
+      "overriden_lines": 0
+    }
+  }
+}
