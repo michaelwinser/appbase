@@ -202,9 +202,19 @@ func (e *EnvFileResolver) readAll() (map[string]string, error) {
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
+		// Strip optional "export " prefix
+		line = strings.TrimPrefix(line, "export ")
+
 		if idx := strings.IndexByte(line, '='); idx > 0 {
 			key := strings.TrimSpace(line[:idx])
 			val := strings.TrimSpace(line[idx+1:])
+			// Strip matching quotes
+			if len(val) >= 2 {
+				if (val[0] == '"' && val[len(val)-1] == '"') ||
+					(val[0] == '\'' && val[len(val)-1] == '\'') {
+					val = val[1 : len(val)-1]
+				}
+			}
 			entries[key] = val
 		}
 	}

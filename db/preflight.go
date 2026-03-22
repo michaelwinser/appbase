@@ -55,10 +55,10 @@ func (d *DB) preflightSQL() error {
 		return fmt.Errorf("preflight: read mismatch (wrote %q, got %q)", ts, readBack)
 	}
 
-	// Clean up
-	_, err = d.sql.Exec(`DELETE FROM _appbase_preflight WHERE id = 'check'`)
+	// Clean up — drop the table entirely so it doesn't persist
+	_, err = d.sql.Exec(`DROP TABLE IF EXISTS _appbase_preflight`)
 	if err != nil {
-		return fmt.Errorf("preflight: cannot delete: %w", err)
+		return fmt.Errorf("preflight: cannot drop table: %w", err)
 	}
 
 	log.Printf("Preflight check passed (sqlite)")

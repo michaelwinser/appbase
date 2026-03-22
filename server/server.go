@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -102,10 +103,20 @@ func corsMiddleware(allowedOrigins []string) func(http.Handler) http.Handler {
 }
 
 // RespondJSON writes a JSON response.
+// Encodes to a buffer first so encoding errors are caught before writing headers.
 func RespondJSON(w http.ResponseWriter, status int, data interface{}) {
+	buf, err := json.Marshal(data)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"error":"failed to encode response"}`))
+		log.Printf("RespondJSON: marshal error: %v", err)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
+	w.Write(buf)
+	w.Write([]byte("\n"))
 }
 
 // RespondError writes a JSON error response.
