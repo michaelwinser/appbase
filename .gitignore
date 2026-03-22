@@ -16,3 +16,6 @@ data/
 
 # Binaries
 /todo
+/todo-api
+/bookmarks
+/secret

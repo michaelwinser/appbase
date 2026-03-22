@@ -99,6 +99,53 @@ cmd_test() {
     esac
 }
 
+cmd_codegen() {
+    spec="${1:-openapi.yaml}"
+    if [ ! -f "$spec" ]; then
+        echo "No $spec found. Create an OpenAPI spec first."
+        exit 1
+    fi
+
+    # Ensure oapi-codegen is installed
+    if ! command -v oapi-codegen >/dev/null 2>&1; then
+        info "Installing oapi-codegen..."
+        go install github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@latest
+    fi
+
+    mkdir -p api
+
+    # Generate server (chi) + types
+    if [ -f oapi-codegen.yaml ]; then
+        info "Generating server from $spec..."
+        oapi-codegen --config oapi-codegen.yaml "$spec"
+    else
+        info "Generating server from $spec (default config)..."
+        oapi-codegen -generate chi-server,types -package api -o api/server.gen.go "$spec"
+    fi
+
+    # Generate client
+    if [ -f oapi-codegen-client.yaml ]; then
+        info "Generating client from $spec..."
+        oapi-codegen --config oapi-codegen-client.yaml "$spec"
+    else
+        info "Generating client from $spec (default config)..."
+        oapi-codegen -generate client,types -package api -o api/client.gen.go "$spec"
+    fi
+
+    # Generate TypeScript types if frontend exists
+    if [ -d frontend ] || [ -d src ]; then
+        if command -v npx >/dev/null 2>&1; then
+            info "Generating TypeScript types..."
+            outdir="frontend/src/lib"
+            [ -d src ] && outdir="src/lib"
+            mkdir -p "$outdir"
+            npx openapi-typescript "$spec" -o "$outdir/api.d.ts" 2>/dev/null || echo "  (TypeScript codegen skipped)"
+        fi
+    fi
+
+    success "Codegen complete"
+}
+
 cmd_run() {
     info "Running todo example..."
     mkdir -p data
@@ -350,6 +397,9 @@ Devcontainer:
   devcontainer down    Stop development containers
   devcontainer shell   Open shell in workspace container
 
+Codegen:
+  codegen [spec]       Generate server + client from OpenAPI spec
+
 Other:
   help                 Show this help message
 
@@ -373,6 +423,7 @@ shift 2>/dev/null || true
 
 case "$command" in
     init)           cmd_init "$@" ;;
+    codegen)        cmd_codegen "$@" ;;
     secret)         cmd_secret "$@" ;;
     build)          cmd_build "$@" ;;
     test)           cmd_test "$@" ;;
