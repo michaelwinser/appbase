@@ -1,0 +1,25 @@
+docs/code-review-2026-03.md
+  a60b2c4d5f6cb007 1-66
+docs/architecture-local-mode.md
+  a60b2c4d5f6cb007 1-235
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "c1b9628639025ea3a68ccdfbe9f9f52e2b7cd930",
+  "prompts": {
+    "a60b2c4d5f6cb007": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9483af96-511e-4f8d-bd6b-4a9c281bdd8d",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 301,
+      "overriden_lines": 0
+    }
+  }
+}
