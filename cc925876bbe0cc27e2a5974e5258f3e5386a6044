@@ -1,0 +1,35 @@
+cmd/ab/secret.go
+  0e159da3e0bed3fb 1-235
+cmd/ab/lintapi.go
+  0e159da3e0bed3fb 1-177
+cmd/ab/project.go
+  0e159da3e0bed3fb 1-132
+cmd/ab/main.go
+  0e159da3e0bed3fb 1-56
+cmd/ab/deploy.go
+  0e159da3e0bed3fb 1-251
+cmd/ab/init.go
+  0e159da3e0bed3fb 1-131
+cmd/ab/codegen.go
+  0e159da3e0bed3fb 1-117
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "cc925876bbe0cc27e2a5974e5258f3e5386a6044",
+  "prompts": {
+    "0e159da3e0bed3fb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c070a507-3782-4b76-8b23-aa21d56393c4",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 1101,
+      "total_deletions": 2,
+      "accepted_lines": 1099,
+      "overriden_lines": 0
+    }
+  }
+}
