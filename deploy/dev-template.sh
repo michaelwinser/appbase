@@ -17,7 +17,31 @@ APP_E2E_DIR="${APP_E2E_DIR:-e2e}"
 # --- Standard commands (override any of these in your ./dev) ---
 
 dev_build() {
-    go build -o "$APP_BINARY_NAME" .
+    target="${1:-all}"
+    case "$target" in
+        all)
+            echo "Building CLI..."
+            go build -o "$APP_BINARY_NAME" .
+            if [ -f desktop.go ]; then
+                echo "Building desktop..."
+                go build -tags desktop -o "${APP_BINARY_NAME}-desktop" .
+            fi
+            ;;
+        cli)
+            go build -o "$APP_BINARY_NAME" .
+            ;;
+        desktop)
+            if [ ! -f desktop.go ]; then
+                echo "No desktop.go found. See examples/todo-api/DESKTOP.md."
+                return 1
+            fi
+            go build -tags desktop -o "${APP_BINARY_NAME}-desktop" .
+            ;;
+        *)
+            echo "Usage: ./dev build [all|cli|desktop]"
+            return 1
+            ;;
+    esac
 }
 
 dev_test() {
@@ -41,16 +65,6 @@ dev_serve() {
     go run . serve
 }
 
-dev_desktop() {
-    if [ ! -f desktop.go ]; then
-        echo "No desktop.go found. See examples/todo-api/DESKTOP.md."
-        return 1
-    fi
-    echo "Building desktop app..."
-    go build -tags desktop -o "${APP_BINARY_NAME}App" .
-    echo "Built ${APP_BINARY_NAME}App"
-}
-
 dev_ci() {
     appbase lint-api 2>/dev/null || true
     go vet ./...
@@ -72,8 +86,7 @@ _load_secrets() {
 
 dev_dispatch() {
     case "${1:-help}" in
-        build)      dev_build ;;
-        desktop)    dev_desktop ;;
+        build)      shift; dev_build "$@" ;;
         test)       dev_test ;;
         e2e)        dev_e2e ;;
         serve)      dev_serve ;;
@@ -97,8 +110,7 @@ $(basename "$(pwd)") — Project Commands
 Usage: ./dev <command> [options]
 
 Development:
-  build              Build the binary
-  desktop            Build native desktop app (Wails)
+  build [target]     Build all (or: cli, desktop)
   test               Run Go tests
   e2e                Run E2E smoke tests
   serve              Start the web server
