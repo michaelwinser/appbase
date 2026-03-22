@@ -1,0 +1,25 @@
+examples/todo-api/desktop.go
+  0e159da3e0bed3fb 23,33-36
+cli/autoserve.go
+  0e159da3e0bed3fb 7,50-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "c3adc2f07641568395c1882b2fa7230b50f7cf97",
+  "prompts": {
+    "0e159da3e0bed3fb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c070a507-3782-4b76-8b23-aa21d56393c4",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 28,
+      "total_deletions": 8,
+      "accepted_lines": 21,
+      "overriden_lines": 0
+    }
+  }
+}
