@@ -34,7 +34,17 @@ In the Cloud Console:
 4. Add redirect URIs (provision prints these from app.json)
 5. Copy the Client ID and Client Secret
 
-### 3. Store credentials in the OS keychain
+### 3. Import credentials into the OS keychain
+
+Download the credentials JSON from the Cloud Console and import directly:
+
+```bash
+./ab secret import ~/Downloads/client_secret_123456789.json
+```
+
+This parses the JSON, extracts `client_id` and `client_secret`, and stores both in the keychain. You can then delete the JSON file.
+
+Or set them individually:
 
 ```bash
 ./ab secret set google-client-id "123456789.apps.googleusercontent.com"
@@ -77,6 +87,7 @@ Secrets never appear as plaintext in the deploy command or Cloud Run environment
 ./ab secret get <name>              # Retrieve from keychain
 ./ab secret delete <name>           # Remove from keychain
 ./ab secret list                    # Show secrets from all sources
+./ab secret import <creds.json>     # Import Google OAuth credentials JSON
 ./ab secret push <name1,name2>      # Push keychain → GCP Secret Manager
 ```
 

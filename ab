@@ -204,16 +204,17 @@ cmd_secret() {
     project="$(app_name)"
 
     if [ -z "$1" ]; then
-        echo "Usage: ./ab secret <set|get|delete|list|push> [args...]"
+        echo "Usage: ./ab secret <command> [args...]"
         echo ""
         echo "Manage secrets in the OS keychain for project: $project"
         echo ""
         echo "Commands:"
-        echo "  set <name> <value>    Store a secret in the keychain"
-        echo "  get <name>            Retrieve a secret"
-        echo "  delete <name>         Remove a secret"
-        echo "  list                  List known secrets"
-        echo "  push <name1,name2>    Push secrets to GCP Secret Manager"
+        echo "  set <name> <value>       Store a secret in the keychain"
+        echo "  get <name>               Retrieve a secret"
+        echo "  delete <name>            Remove a secret"
+        echo "  list                     List known secrets"
+        echo "  import <creds.json>      Import Google OAuth credentials JSON"
+        echo "  push <name1,name2>       Push secrets to GCP Secret Manager"
         exit 1
     fi
 

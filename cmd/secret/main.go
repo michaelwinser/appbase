@@ -10,6 +10,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -98,6 +99,60 @@ func main() {
 			fmt.Println("No secrets found.")
 		}
 
+	case "import":
+		// Import Google OAuth credentials JSON (downloaded from Cloud Console)
+		if len(os.Args) < 4 {
+			fmt.Fprintln(os.Stderr, "Usage: secret import <project> <credentials.json>")
+			os.Exit(1)
+		}
+		filePath := os.Args[3]
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error reading %s: %v\n", filePath, err)
+			os.Exit(1)
+		}
+
+		var creds struct {
+			Web struct {
+				ClientID     string `json:"client_id"`
+				ClientSecret string `json:"client_secret"`
+			} `json:"web"`
+			Installed struct {
+				ClientID     string `json:"client_id"`
+				ClientSecret string `json:"client_secret"`
+			} `json:"installed"`
+		}
+		if err := json.Unmarshal(data, &creds); err != nil {
+			fmt.Fprintf(os.Stderr, "Error parsing JSON: %v\n", err)
+			os.Exit(1)
+		}
+
+		clientID := creds.Web.ClientID
+		clientSecret := creds.Web.ClientSecret
+		if clientID == "" {
+			clientID = creds.Installed.ClientID
+			clientSecret = creds.Installed.ClientSecret
+		}
+		if clientID == "" || clientSecret == "" {
+			fmt.Fprintln(os.Stderr, "Error: could not find client_id/client_secret in JSON")
+			fmt.Fprintln(os.Stderr, "Expected format: {\"web\": {\"client_id\": ..., \"client_secret\": ...}}")
+			os.Exit(1)
+		}
+
+		if err := keychain.Set(project, "google-client-id", clientID); err != nil {
+			fmt.Fprintf(os.Stderr, "Error storing client ID: %v\n", err)
+			os.Exit(1)
+		}
+		if err := keychain.Set(project, "google-client-secret", clientSecret); err != nil {
+			fmt.Fprintf(os.Stderr, "Error storing client secret: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Printf("Imported OAuth credentials for %s\n", project)
+		fmt.Printf("  google-client-id: %s\n", clientID)
+		fmt.Printf("  google-client-secret: (stored in keychain)\n")
+		fmt.Printf("\nYou can now delete %s\n", filePath)
+
 	case "env":
 		// Output export statements for known secret names.
 		// Used by shell scripts: eval "$(go run ./cmd/secret env project)"
@@ -148,6 +203,7 @@ Commands:
   get <project> <name>            Retrieve a secret from the keychain
   delete <project> <name>         Remove a secret from the keychain
   list <project>                  List known secrets (.env and GCP)
+  import <project> <creds.json>   Import Google OAuth credentials JSON
   env <project>                   Output export statements for shell eval
   push <project> <name1,name2>    Push keychain secrets to GCP Secret Manager`)
 }
