@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -44,6 +45,21 @@ func AutoServe(handler http.Handler) (url string, stop func(), err error) {
 	}
 
 	return url, stop, nil
+}
+
+// SetupLocalMode configures the environment for local/desktop mode:
+// creates ~/.config/<appname>/, sets SQLITE_DB_PATH, sets AUTH_MODE=dev.
+// Call this before appbase.New() in desktop or embedded contexts that
+// don't go through the CLI framework.
+func SetupLocalMode(appName string) {
+	home, _ := os.UserHomeDir()
+	if home != "" {
+		dataDir := home + "/.config/" + appName
+		os.MkdirAll(dataDir, 0755)
+		os.Setenv("SQLITE_DB_PATH", dataDir+"/app.db")
+	}
+	os.Setenv("AUTH_MODE", "dev")
+	IsLocalMode = true
 }
 
 // waitForReady polls the health endpoint until the server responds.

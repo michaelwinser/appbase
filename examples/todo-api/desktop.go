@@ -20,6 +20,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 
 	"github.com/michaelwinser/appbase"
+	appcli "github.com/michaelwinser/appbase/cli"
 	"github.com/michaelwinser/appbase/examples/todo-api/api"
 	"github.com/michaelwinser/appbase/server"
 	"github.com/michaelwinser/appbase/store"
@@ -29,7 +30,10 @@ import (
 var desktopAssets embed.FS
 
 func main() {
-	// Initialize app in quiet, local mode
+	// Set up local mode: ~/.config/todo-api/app.db, no auth
+	appcli.SetupLocalMode("todo-api")
+
+	// Initialize app
 	app, err := appbase.New(appbase.Config{Name: "todo-api", Quiet: true})
 	if err != nil {
 		log.Fatal(err)
