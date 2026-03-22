@@ -100,8 +100,7 @@ func (k *KeychainResolver) Delete(project, name string) error {
 }
 
 func (k *KeychainResolver) List(project string) ([]string, error) {
-	// go-keyring doesn't support listing; return nil
-	return nil, nil
+	return keychainList(keychainService + "/" + project)
 }
 
 // --- Docker Secrets ---

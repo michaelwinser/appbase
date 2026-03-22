@@ -69,22 +69,33 @@ func main() {
 		fmt.Printf("Deleted %s from keychain\n", name)
 
 	case "list":
-		// List from keychain (limited) and .env
+		// List from keychain
+		keychainNames, _ := keychain.List(project)
+		if len(keychainNames) > 0 {
+			fmt.Println("Keychain:")
+			for _, n := range keychainNames {
+				fmt.Printf("  %s\n", n)
+			}
+		}
+		// List from .env
 		envResolver := &config.EnvFileResolver{}
-		names, _ := envResolver.List(project)
-		if len(names) > 0 {
-			fmt.Println("From .env:")
-			for _, n := range names {
+		envNames, _ := envResolver.List(project)
+		if len(envNames) > 0 {
+			fmt.Println(".env:")
+			for _, n := range envNames {
 				fmt.Printf("  %s\n", n)
 			}
 		}
 		// List from GCP if available
 		gcpNames, err := gcp.List(project)
 		if err == nil && len(gcpNames) > 0 {
-			fmt.Println("From GCP Secret Manager:")
+			fmt.Println("GCP Secret Manager:")
 			for _, n := range gcpNames {
 				fmt.Printf("  %s\n", n)
 			}
+		}
+		if len(keychainNames) == 0 && len(envNames) == 0 && len(gcpNames) == 0 {
+			fmt.Println("No secrets found.")
 		}
 
 	case "push":
