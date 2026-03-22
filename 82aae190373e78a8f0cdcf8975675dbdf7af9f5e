@@ -1,0 +1,23 @@
+deploy/cloudrun.sh
+  0e159da3e0bed3fb 11-43,46-47,71,73-75,77-78,80-82,85-91,93-100,103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "82aae190373e78a8f0cdcf8975675dbdf7af9f5e",
+  "prompts": {
+    "0e159da3e0bed3fb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c070a507-3782-4b76-8b23-aa21d56393c4",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 60,
+      "total_deletions": 16,
+      "accepted_lines": 60,
+      "overriden_lines": 0
+    }
+  }
+}
