@@ -31,6 +31,10 @@ type Config struct {
 	// AllowedOrigins for CORS. If empty, CORS headers are not set (same-origin only).
 	// Set to ["*"] to allow all origins (public APIs only — not recommended with auth).
 	AllowedOrigins []string
+
+	// Quiet suppresses the per-request access log (chi middleware.Logger).
+	// Use for CLI commands where request logging is noise.
+	Quiet bool
 }
 
 // New creates a new server with standard middleware (logger, recoverer, CORS, JSON content-type).
@@ -49,7 +53,9 @@ func New(configs ...Config) *Server {
 	}
 
 	r := chi.NewRouter()
-	r.Use(middleware.Logger)
+	if !cfg.Quiet {
+		r.Use(middleware.Logger)
+	}
 	r.Use(middleware.Recoverer)
 	r.Use(corsMiddleware(cfg.AllowedOrigins))
 

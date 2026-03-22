@@ -162,6 +162,7 @@ func New(config Config) (*App, error) {
 	srv := server.New(server.Config{
 		Port:           config.Port,
 		AllowedOrigins: config.AllowedOrigins,
+		Quiet:          config.Quiet,
 	})
 
 	// Register auth middleware (must be before any routes)
