@@ -1,0 +1,39 @@
+examples/todo/main.go
+  0e159da3e0bed3fb 31,40-41,82,93,97,101,120,125,140
+store/sql.go
+  0e159da3e0bed3fb 1-233
+store/firestore.go
+  0e159da3e0bed3fb 1-173
+db/db.go
+  0e159da3e0bed3fb 114-119
+store/store_test.go
+  0e159da3e0bed3fb 1-283
+examples/todo/store.go
+  0e159da3e0bed3fb 8,13-17,20,22,26-30,32,35,37,49
+examples/todo/usecases_test.go
+  0e159da3e0bed3fb 34-35,49
+store/reflect.go
+  0e159da3e0bed3fb 1-187
+store/store.go
+  0e159da3e0bed3fb 1-164
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "89477a97800259d3c1ea032cb02ff5ebc9a25f91",
+  "prompts": {
+    "0e159da3e0bed3fb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c070a507-3782-4b76-8b23-aa21d56393c4",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 1132,
+      "total_deletions": 102,
+      "accepted_lines": 1076,
+      "overriden_lines": 0
+    }
+  }
+}
