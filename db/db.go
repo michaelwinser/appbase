@@ -93,21 +93,48 @@ func (d *DB) Begin() (*sql.Tx, error) {
 	return d.sql.Begin()
 }
 
-// New creates a new DB connection based on environment configuration.
-// STORE_TYPE determines the backend: "sqlite" (default) or "firestore".
-func New() (*DB, error) {
-	storeType := os.Getenv("STORE_TYPE")
-	if storeType == "" {
-		storeType = "sqlite"
+// DBConfig configures the database connection.
+type DBConfig struct {
+	// StoreType selects the backend: "sqlite" (default) or "firestore".
+	StoreType string
+	// SQLitePath is the SQLite database file path (default: "data/app.db").
+	SQLitePath string
+	// GCPProject is required for the Firestore backend.
+	GCPProject string
+}
+
+// New creates a new DB connection.
+// Accepts an optional DBConfig; falls back to environment variables if not provided.
+func New(configs ...DBConfig) (*DB, error) {
+	var cfg DBConfig
+	if len(configs) > 0 {
+		cfg = configs[0]
 	}
 
-	switch storeType {
+	// Fall back to env vars for unset fields
+	if cfg.StoreType == "" {
+		cfg.StoreType = os.Getenv("STORE_TYPE")
+	}
+	if cfg.StoreType == "" {
+		cfg.StoreType = "sqlite"
+	}
+	if cfg.SQLitePath == "" {
+		cfg.SQLitePath = os.Getenv("SQLITE_DB_PATH")
+	}
+	if cfg.SQLitePath == "" {
+		cfg.SQLitePath = "data/app.db"
+	}
+	if cfg.GCPProject == "" {
+		cfg.GCPProject = os.Getenv("GOOGLE_CLOUD_PROJECT")
+	}
+
+	switch cfg.StoreType {
 	case "sqlite":
-		return newSQLite()
+		return newSQLiteWithPath(cfg.SQLitePath)
 	case "firestore":
-		return newFirestore()
+		return newFirestoreWithProject(cfg.GCPProject)
 	default:
-		return nil, fmt.Errorf("unsupported STORE_TYPE: %q (supported: sqlite, firestore)", storeType)
+		return nil, fmt.Errorf("unsupported store type: %q (supported: sqlite, firestore)", cfg.StoreType)
 	}
 }
 

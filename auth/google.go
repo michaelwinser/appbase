@@ -37,21 +37,46 @@ type GoogleAuth struct {
 
 // GoogleAuthConfig configures Google OAuth.
 type GoogleAuthConfig struct {
+	// ClientID is the Google OAuth client ID.
+	// Falls back to GOOGLE_CLIENT_ID env var.
+	ClientID string
+
+	// ClientSecret is the Google OAuth client secret.
+	// Falls back to GOOGLE_CLIENT_SECRET env var.
+	ClientSecret string
+
+	// RedirectURL is the OAuth callback URL. Auto-detected from request if empty.
+	// Falls back to GOOGLE_REDIRECT_URL env var.
+	RedirectURL string
+
 	// Scopes to request. Defaults to openid, email, profile.
 	// Apps can add their own (e.g., calendar.readonly).
 	ExtraScopes []string
 
 	// AllowedUsers restricts login to these emails. Empty = allow all.
+	// Falls back to ALLOWED_USERS env var.
 	AllowedUsers []string
 }
 
-// NewGoogleAuth creates a Google OAuth handler from environment variables.
-// Returns nil if GOOGLE_CLIENT_ID is not set (auth disabled).
+// NewGoogleAuth creates a Google OAuth handler.
+// Config fields fall back to environment variables if not set.
+// Returns nil if no client ID is configured (auth disabled).
 func NewGoogleAuth(sessions *SessionStore, config GoogleAuthConfig) *GoogleAuth {
-	clientID := os.Getenv("GOOGLE_CLIENT_ID")
-	clientSecret := os.Getenv("GOOGLE_CLIENT_SECRET")
+	clientID := config.ClientID
+	if clientID == "" {
+		clientID = os.Getenv("GOOGLE_CLIENT_ID")
+	}
+	clientSecret := config.ClientSecret
+	if clientSecret == "" {
+		clientSecret = os.Getenv("GOOGLE_CLIENT_SECRET")
+	}
 	if clientID == "" || clientSecret == "" {
 		return nil
+	}
+
+	redirectURL := config.RedirectURL
+	if redirectURL == "" {
+		redirectURL = os.Getenv("GOOGLE_REDIRECT_URL")
 	}
 
 	scopes := []string{"openid", "email", "profile"}
@@ -73,7 +98,7 @@ func NewGoogleAuth(sessions *SessionStore, config GoogleAuthConfig) *GoogleAuth 
 	return &GoogleAuth{
 		clientID:     clientID,
 		clientSecret: clientSecret,
-		redirectURL:  os.Getenv("GOOGLE_REDIRECT_URL"),
+		redirectURL:  redirectURL,
 		sessions:     sessions,
 		httpClient:   &http.Client{Timeout: 30 * time.Second},
 		allowedUsers: allowedUsers,

@@ -6,15 +6,14 @@
 package appbase
 
 import (
-	"os"
-
 	"github.com/michaelwinser/appbase/db"
 )
 
 // NewTestDB creates an in-memory SQLite database for testing.
 // The caller should defer db.Close().
 func NewTestDB() (*db.DB, error) {
-	os.Setenv("STORE_TYPE", "sqlite")
-	os.Setenv("SQLITE_DB_PATH", ":memory:")
-	return db.New()
+	return db.New(db.DBConfig{
+		StoreType:  "sqlite",
+		SQLitePath: ":memory:",
+	})
 }

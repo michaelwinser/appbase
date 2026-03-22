@@ -84,11 +84,10 @@ func (c *Config) GetList(key string) []string {
 }
 
 // Set overrides a config value at runtime (useful for tests).
-// Also sets the corresponding env var so the override takes effect
-// even when Get() checks env vars first.
+// Note: Get() checks env vars first, so if an env var is set for this key,
+// Set() will not override it. Clear the env var first if needed.
 func (c *Config) Set(key, value string) {
 	c.defaults[key] = value
-	os.Setenv(toEnvKey(key), value)
 }
 
 // Port returns the configured server port.

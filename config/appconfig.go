@@ -253,6 +253,7 @@ func (c *AppConfig) applyEnvVars() {
 	}
 }
 
+// Deprecated: Use appbase.Config fields to pass config explicitly instead.
 // SetEnvVars exports config values as environment variables so that
 // existing code (db.New, auth.NewGoogleAuth) picks them up.
 // Call this after loading config and before initializing the app.

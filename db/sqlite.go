@@ -4,17 +4,11 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"os"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func newSQLite() (*DB, error) {
-	dbPath := os.Getenv("SQLITE_DB_PATH")
-	if dbPath == "" {
-		dbPath = "data/app.db"
-	}
-
+func newSQLiteWithPath(dbPath string) (*DB, error) {
 	sqlDB, err := sql.Open("sqlite3", dbPath+"?_foreign_keys=on")
 	if err != nil {
 		return nil, fmt.Errorf("opening sqlite database: %w", err)

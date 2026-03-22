@@ -22,6 +22,9 @@ type Server struct {
 
 // Config configures the HTTP server.
 type Config struct {
+	// Port for the HTTP server. Falls back to PORT env var, then "3000".
+	Port string
+
 	// AllowedOrigins for CORS. If empty, CORS headers are not set (same-origin only).
 	// Set to ["*"] to allow all origins (public APIs only — not recommended with auth).
 	AllowedOrigins []string
@@ -29,14 +32,17 @@ type Config struct {
 
 // New creates a new server with standard middleware (logger, recoverer, CORS, JSON content-type).
 func New(configs ...Config) *Server {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "3000"
-	}
-
 	var cfg Config
 	if len(configs) > 0 {
 		cfg = configs[0]
+	}
+
+	port := cfg.Port
+	if port == "" {
+		port = os.Getenv("PORT")
+	}
+	if port == "" {
+		port = "3000"
 	}
 
 	r := chi.NewRouter()

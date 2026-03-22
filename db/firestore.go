@@ -4,15 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 
 	"cloud.google.com/go/firestore"
 )
 
-func newFirestore() (*DB, error) {
-	project := os.Getenv("GOOGLE_CLOUD_PROJECT")
+func newFirestoreWithProject(project string) (*DB, error) {
 	if project == "" {
-		return nil, fmt.Errorf("GOOGLE_CLOUD_PROJECT is required for Firestore backend")
+		return nil, fmt.Errorf("GCP project is required for Firestore backend (set GCPProject in DBConfig or GOOGLE_CLOUD_PROJECT env var)")
 	}
 
 	ctx := context.Background()

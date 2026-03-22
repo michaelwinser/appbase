@@ -43,7 +43,11 @@ var (
 
 func setup() error {
 	var err error
-	app, err = appbase.New(appbase.Config{Name: "todo-api", Quiet: !appcli.IsServeCommand})
+	cfg := appbase.Config{Name: "todo-api", Quiet: !appcli.IsServeCommand, LocalMode: appcli.IsLocalMode}
+	if appcli.LocalDataPath != "" {
+		cfg.DB.SQLitePath = appcli.LocalDataPath + "/app.db"
+	}
+	app, err = appbase.New(cfg)
 	if err != nil {
 		return err
 	}

@@ -55,11 +55,17 @@ type Config struct {
 	// (same-origin only). Set to ["*"] for public APIs without authentication.
 	// For authenticated apps, list specific origins (e.g., ["http://localhost:3000"]).
 	AllowedOrigins []string
+
+	// Port for the HTTP server. Falls back to PORT env var, then "3000".
+	Port string
+
+	// DB configures the database connection. Falls back to env vars if not set.
+	DB db.DBConfig
 }
 
 // New creates a new App with database, auth, and server initialized.
-// If app.yaml exists, loads it and exports config as env vars so that
-// db.New(), auth, and server pick up the settings automatically.
+// If app.yaml exists, loads it and merges config values (explicit Config
+// fields take precedence over app.yaml, which takes precedence over env vars).
 func New(config Config) (*App, error) {
 	// Suppress log output for CLI commands
 	if config.Quiet {
@@ -67,26 +73,27 @@ func New(config Config) (*App, error) {
 		defer log.SetOutput(os.Stderr)
 	}
 
-	// LocalMode: set up DB path if not already configured
-	if config.LocalMode && os.Getenv("SQLITE_DB_PATH") == "" {
+	// LocalMode: default DB path to ~/.config/<name>/app.db
+	if config.LocalMode && config.DB.SQLitePath == "" {
 		home, _ := os.UserHomeDir()
 		if home != "" && config.Name != "" {
 			dataDir := home + "/.config/" + config.Name
 			os.MkdirAll(dataDir, 0755)
-			os.Setenv("SQLITE_DB_PATH", dataDir+"/app.db")
+			config.DB.SQLitePath = dataDir + "/app.db"
 		}
 	}
 
-	// Load app.yaml if present — sets env vars for downstream components
+	// Load app.yaml if present — merge into config (explicit fields win)
 	configPath := "app.yaml"
 	if _, err := os.Stat(configPath); err == nil {
+		gcpProject := config.DB.GCPProject
+		if gcpProject == "" {
+			gcpProject = os.Getenv("GOOGLE_CLOUD_PROJECT")
+		}
 		var secrets appconfig.SecretResolver
-		// Use the default resolver chain (keychain → docker → .env → GCP)
-		gcpProject := os.Getenv("GOOGLE_CLOUD_PROJECT")
 		if gcpProject != "" {
 			secrets = appconfig.DefaultResolver(gcpProject)
 		} else {
-			// Minimal resolver without GCP (local dev)
 			secrets = appconfig.NewChainResolver(
 				&appconfig.KeychainResolver{},
 				&appconfig.DockerSecretResolver{},
@@ -97,16 +104,36 @@ func New(config Config) (*App, error) {
 		if err != nil {
 			log.Printf("Warning: could not load app.yaml: %v", err)
 		} else {
-			appCfg.SetEnvVars()
+			// Merge app.yaml values into config (explicit Config fields take precedence)
 			if config.Name == "" {
 				config.Name = appCfg.Name
+			}
+			if config.Port == "" && appCfg.Port != 0 {
+				config.Port = fmt.Sprintf("%d", appCfg.Port)
+			}
+			if config.DB.StoreType == "" {
+				config.DB.StoreType = appCfg.Store.Type
+			}
+			if config.DB.SQLitePath == "" {
+				config.DB.SQLitePath = appCfg.Store.Path
+			}
+			if config.DB.GCPProject == "" {
+				config.DB.GCPProject = appCfg.Store.GCPProject
+			}
+			if config.GoogleAuth == nil && (appCfg.Auth.ClientID != "" || appCfg.Auth.ClientSecret != "") {
+				config.GoogleAuth = &auth.GoogleAuthConfig{
+					ClientID:     appCfg.Auth.ClientID,
+					ClientSecret: appCfg.Auth.ClientSecret,
+					RedirectURL:  appCfg.Auth.RedirectURL,
+					AllowedUsers: appCfg.Auth.AllowedUsers,
+				}
 			}
 			log.Printf("Loaded config from app.yaml (env: %s)", appCfg.Env())
 		}
 	}
 
-	// Initialize database
-	database, err := db.New()
+	// Initialize database with explicit config
+	database, err := db.New(config.DB)
 	if err != nil {
 		return nil, fmt.Errorf("initializing database: %w", err)
 	}
@@ -132,7 +159,10 @@ func New(config Config) (*App, error) {
 	google := auth.NewGoogleAuth(sessions, googleConfig)
 
 	// Initialize server
-	srv := server.New(server.Config{AllowedOrigins: config.AllowedOrigins})
+	srv := server.New(server.Config{
+		Port:           config.Port,
+		AllowedOrigins: config.AllowedOrigins,
+	})
 
 	// Register auth middleware (must be before any routes)
 	if config.LocalMode {

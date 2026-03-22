@@ -24,10 +24,15 @@ import (
 // Check this in your setupFn to set Config.Quiet for non-serve commands.
 var IsServeCommand bool
 
-// IsLocalMode is true when the CLI will use auto-serve (no --server, not serve command).
-// When true, AUTH_MODE is set to "dev" so the app runs in single-user mode
-// without requiring OAuth login. Check this in setupFn if you need to know.
+// IsLocalMode is true when the CLI runs without --server (not the serve command).
+// When true, the app should use LocalMode for single-user operation without OAuth.
+// Check this in setupFn to set appbase.Config{LocalMode: true}.
 var IsLocalMode bool
+
+// LocalDataPath is the data directory for local mode (e.g., ~/.config/<appname>).
+// Set automatically when IsLocalMode is true. Use this to set Config.DB.SQLitePath
+// in your setupFn: config.DB.SQLitePath = appcli.LocalDataPath + "/app.db"
+var LocalDataPath string
 
 // Deprecated: Use ClientForCommand with an in-process handler transport instead.
 // AutoServeHandler is set by the app after setup to enable auto-serve.
@@ -59,9 +64,8 @@ func New(name, description string, setupFn func() error) *CLI {
 				serverFlag, _ := cmd.Flags().GetString("server")
 				if serverFlag == "" {
 					IsLocalMode = true
-					os.Setenv("AUTH_MODE", "dev")
 
-					// Use ~/.config/<appname>/ for local mode data
+					// Determine data directory for local mode
 					dataPath, _ := cmd.Flags().GetString("data")
 					if dataPath == "" {
 						home, _ := os.UserHomeDir()
@@ -71,7 +75,7 @@ func New(name, description string, setupFn func() error) *CLI {
 					}
 					if dataPath != "" {
 						os.MkdirAll(dataPath, 0755)
-						os.Setenv("SQLITE_DB_PATH", dataPath+"/app.db")
+						LocalDataPath = dataPath
 					}
 				}
 			}
