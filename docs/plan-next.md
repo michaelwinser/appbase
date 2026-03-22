@@ -24,28 +24,103 @@
 - Session store has dual backends (`session_sql.go`, `session_firestore.go`)
 - Todo example demonstrates dual-backend store pattern (`store.go`, `store_sql.go`, `store_firestore.go`)
 
+### 4. Entity Store Abstraction (`store/` package)
+- `store.Collection[T]` with typed CRUD on both SQLite and Firestore
+- `store:` tag with `,pk` and `,index` options
+- SQL backend auto-generates CREATE TABLE from struct metadata
+- Firestore backend uses single-field queries, sorts in memory
+- Three examples: todo (raw), todo-store (Collection), bookmarks (Collection)
+
+## Next: Unified Config, Secrets, and Environments
+
+### 5. App Config (`app.yaml`)
+
+Replace `app.json` and scattered env vars with a single config file.
+
+```yaml
+name: my-app
+port: 3000
+
+store:
+  type: sqlite
+  path: data/app.db
+
+auth:
+  allowed_users: []
+
+environments:
+  local:
+    url: http://localhost:3000
+
+  docker:
+    url: http://localhost:${PORT}
+
+  production:
+    url: https://my-app-abc.run.app
+    store:
+      type: firestore
+      gcp_project: xwind-appbase
+    auth:
+      client_id: ${secret:google-client-id}
+      client_secret: ${secret:google-client-secret}
+      allowed_users:
+        - admin@example.com
+```
+
+- `config.Load("app.yaml")` reads file, merges active environment overrides
+- `APP_ENV=production` selects environment (default: `local`)
+- Layering order: `app.yaml defaults → environment overrides → .env → env vars`
+- Replaces `app.json` (superset of its fields)
+- Deploy scripts read from `app.yaml` instead of `app.json`
+
+### 6. Secret Management
+
+Secrets stored in OS keychain (macOS Keychain, Linux secret-service, Windows Credential Manager) instead of plaintext `.env`.
+
+**CLI:**
+```bash
+./ab secret set google-client-id "123456.apps.googleusercontent.com"
+./ab secret set google-client-secret "GOCSPX-..."
+./ab secret list
+./ab secret get google-client-id
+./ab secret delete google-client-id
+```
+
+**Resolution chain (checked in order):**
+1. OS keychain (`appbase/<project-name>/<secret-name>`)
+2. `.env` file (fallback for containers, CI — no keychain available)
+3. GCP Secret Manager (production)
+4. Env var override (highest priority)
+
+**`${secret:name}` syntax in app.yaml:**
+- Local: resolved from keychain or .env
+- Production: resolved from GCP Secret Manager
+- `./ab provision` pushes keychain secrets to GCP Secret Manager
+- `./ab deploy` uses Cloud Run `--set-secrets` (native integration, secrets never passed as env var values)
+
+**Go library:** `github.com/zalando/go-keyring` — wraps macOS Keychain, Linux secret-service, Windows Credential Manager.
+
+**Benefits:**
+- No plaintext secrets on disk
+- `./ab secret set` replaces manual .env editing
+- Provisioning can push local secrets to GCP automatically
+- CI uses env vars (no keychain), same resolution chain
+
+### 7. Port Management
+
+Ports declared in `app.yaml` instead of external portmanager.
+
+- `app.yaml` is the allocation record
+- `./ab init` checks for conflicts across sibling projects
+- Docker compose reads port from `app.yaml`
+- Portmanager becomes optional / deprecated
+
 ## Later
 
-### 4. Entity Store Abstraction (`store/` package)
-- Opt-in ORM-like layer that maps entities to SQLite or Firestore automatically
-- Apps define structs with `store:` tags, get `Collection[T]` with List/Get/Create/Update/Delete
-- Assumes low volume, few users — in-memory sorting, single-field Firestore queries only
-- Eliminates the 3-file boilerplate (store.go, store_sql.go, store_firestore.go) per entity
-- Raw `db.SQL()` and `db.Firestore()` access remains available for complex cases
-- Lives in appbase as `store/` package, not a separate module
-
-### 5. Config File Support
-- `config.LoadFile("app.yaml")` to read defaults from YAML
-- Env vars still override file values
-
-### 5. Secret Manager Integration
-- `config.UseSecretManager("gcp")` to resolve secrets from GCP Secret Manager
-- Pattern: `${SECRET:key}` in config values
-
-### 7. PostgreSQL Support
+### 8. PostgreSQL Support
 - Third store backend
 - Connection via `DATABASE_URL` env var
 
-### 8. Forgejo CI
+### 9. Forgejo CI
 - Alternative to GitHub Actions
 - Workflow template for Forgejo
