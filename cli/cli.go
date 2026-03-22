@@ -60,12 +60,12 @@ func New(name, description string, setupFn func() error) *CLI {
 					IsLocalMode = true
 					os.Setenv("AUTH_MODE", "dev")
 
-					// Use ~/.appbase/<appname>/ for local mode data
+					// Use ~/.config/<appname>/ for local mode data
 					dataPath, _ := cmd.Flags().GetString("data")
 					if dataPath == "" {
 						home, _ := os.UserHomeDir()
 						if home != "" {
-							dataPath = home + "/.appbase/" + name
+							dataPath = home + "/.config/" + name
 						}
 					}
 					if dataPath != "" {
@@ -134,7 +134,7 @@ func (c *CLI) addBuiltinCommands() {
 
 	// Persistent --server flag for CLI commands that talk to the server
 	c.root.PersistentFlags().String("server", "", "Server URL (default: from keychain or http://localhost:3000)")
-	c.root.PersistentFlags().String("data", "", "Data directory (default: ~/.appbase/<appname>/ in local mode)")
+	c.root.PersistentFlags().String("data", "", "Data directory (default: ~/.config/<appname>/ in local mode)")
 
 	appName := c.root.Use
 
