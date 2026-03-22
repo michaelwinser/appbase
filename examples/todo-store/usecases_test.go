@@ -31,11 +31,10 @@ func setupTestApp(t *testing.T) http.Handler {
 	}
 	t.Cleanup(func() { a.Close() })
 
-	if err := a.Migrate(schema); err != nil {
+	s, err := NewTodoStore(a.DB())
+	if err != nil {
 		t.Fatal(err)
 	}
-
-	s := NewTodoStore(a.DB())
 
 	r := a.Server().Router()
 	r.Get("/api/todos", func(w http.ResponseWriter, r *http.Request) {
@@ -47,7 +46,7 @@ func setupTestApp(t *testing.T) http.Handler {
 	r.Get("/", a.LoginPage(nil))
 
 	// Need to set the package-level store for handlers
-	store = s
+	todos = s
 	testSessions = a.Sessions()
 
 	return r
