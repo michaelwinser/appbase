@@ -1,0 +1,25 @@
+cmd/appbase/testlogin.go
+  0e159da3e0bed3fb 1-122
+cmd/appbase/main.go
+  0e159da3e0bed3fb 42-43
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "7c68301369dca295c815ec402886605deb8d6072",
+  "prompts": {
+    "0e159da3e0bed3fb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c070a507-3782-4b76-8b23-aa21d56393c4",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 124,
+      "total_deletions": 0,
+      "accepted_lines": 124,
+      "overriden_lines": 0
+    }
+  }
+}
