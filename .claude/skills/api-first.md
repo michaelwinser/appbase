@@ -180,10 +180,32 @@ This separation is intentional — the API contract and storage schema evolve in
 | `oapi-codegen-client.yaml` | Client codegen config | Rarely |
 | `api/server.gen.go` | Generated server interface + types | Never |
 | `api/client.gen.go` | Generated Go HTTP client | Never |
-| `server.go` | Implements `api.ServerInterface` | Yes |
-| `store.go` | Entity persistence | Yes |
-| `main.go` | Wiring + CLI commands using generated client | Yes |
+| `internal/app/server.go` | Implements `api.ServerInterface` | Yes |
+| `internal/app/store.go` | Entity persistence | Yes |
+| `store.go` | Re-exports from internal/app | Rarely |
+| `main.go` | Server + CLI entry point | Yes |
+| `cmd/desktop/main.go` | Wails desktop entry point (optional) | Yes |
+
+## Project structure
+
+Shared code lives in `internal/app/` so both the server binary and the
+desktop binary can import it:
+
+```
+myapp/
+├── internal/app/         # Shared store + server (exported fields)
+│   ├── store.go
+│   └── server.go
+├── main.go               # Server + CLI
+├── store.go              # Re-exports from internal/app
+├── cmd/desktop/          # Wails desktop (optional)
+│   └── main.go
+├── api/                  # Generated
+├── frontend/             # Svelte
+└── openapi.yaml          # Source of truth
+```
 
 ## Reference Example
 
-See `examples/todo-api/` for a complete working example.
+See `examples/todo-api/` for a complete working example including
+server, CLI with auto-serve, Svelte frontend, and Wails desktop mode.

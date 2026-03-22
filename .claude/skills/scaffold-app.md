@@ -10,23 +10,32 @@ trigger: When the user wants to create a new app built on the appbase module
 
 ```
 myapp/
-├── app.json               # Project identity (name, gcpProject, region)
+├── app.yaml               # App config (name, port, environments, secrets)
+├── app.json               # Deploy script compat (name, gcpProject, region)
 ├── CLAUDE.md              # App-specific AI instructions
 ├── go.mod                 # Depends on github.com/michaelwinser/appbase
-├── main.go                # CLI + server setup using appbase
-├── schema.go              # SQL schema for app entities
-├── store.go               # Store interface + factory (NewXxxStore)
-├── store_sql.go           # SQL backend (SQLite/Postgres)
-├── store_firestore.go     # Firestore backend
-├── handler.go             # HTTP handlers
+├── openapi.yaml           # API spec (source of truth)
+├── main.go                # Server + CLI entry point
+├── store.go               # Re-exports from internal/app
+├── internal/app/          # Shared code (imported by both server and desktop)
+│   ├── store.go           # Entity store (store.Collection)
+│   └── server.go          # Implements api.ServerInterface
+├── api/                   # Generated from openapi.yaml
+│   ├── server.gen.go
+│   └── client.gen.go
+├── frontend/              # Svelte app (built in devcontainer)
+│   ├── src/
+│   └── dist/              # Embedded in Go binary
+├── cmd/desktop/           # Wails desktop entry point (optional)
+│   ├── main.go
+│   ├── wails.json
+│   └── dist/              # Frontend assets (copied from frontend/dist)
 ├── usecases_test.go       # Use case tests (UC-XXXX)
-├── .env                   # Fallback for CI (gitignored, prefer OS keychain)
-├── docs/
-│   └── prd.md             # Product requirements with numbered use cases
+├── e2e/                   # Shell-based E2E tests
 ├── deploy/
-│   ├── Dockerfile         # Copy from appbase/deploy/Dockerfile, customize
-│   └── docker-compose.yml # Copy from appbase/deploy/docker-compose.yml
-├── dev                    # Project command script (executable)
+│   ├── Dockerfile
+│   └── docker-compose.yml
+├── dev                    # Project command script (sources dev-template.sh)
 └── .github/
     └── workflows/ci.yml   # CI pipeline
 ```

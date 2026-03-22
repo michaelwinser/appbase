@@ -81,7 +81,9 @@ appbase/
 ├── examples/              # Example apps (progression of patterns)
 │   ├── todo/              # Raw db connections, hand-written routes
 │   ├── todo-store/        # store.Collection, hand-written routes
-│   ├── todo-api/          # Full stack: OpenAPI, Svelte frontend, CLI auth, auto-serve
+│   ├── todo-api/          # Full stack: OpenAPI, Svelte frontend, Wails desktop, auto-serve
+│   │   ├── internal/app/  # Shared store + server (imported by both mains)
+│   │   └── cmd/desktop/   # Wails desktop entry point
 │   └── bookmarks/         # store.Collection, richer entity
 ├── app.json               # Project identity (name, gcpProject, region, urls)
 ├── Dockerfile             # Cloud Run build (builds todo example)
