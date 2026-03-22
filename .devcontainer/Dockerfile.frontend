@@ -17,7 +17,10 @@
 
 FROM node:20-alpine
 
-# Install pnpm
+# Install pnpm with global bin dir configured
+ENV PNPM_HOME="/root/.local/share/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+ENV SHELL="/bin/sh"
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 # Install OpenAPI TypeScript codegen

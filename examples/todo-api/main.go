@@ -21,7 +21,9 @@ package main
 
 import (
 	"context"
+	"embed"
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
 
@@ -31,6 +33,9 @@ import (
 	appcli "github.com/michaelwinser/appbase/cli"
 	"github.com/michaelwinser/appbase/examples/todo-api/api"
 )
+
+//go:embed frontend/dist/*
+var frontendDist embed.FS
 
 var (
 	app       *appbase.App
@@ -60,25 +65,24 @@ func main() {
 	cliApp := appcli.New("todo-api", "API-first todo app built on appbase", setup)
 
 	cliApp.SetServeFunc(func() error {
-		r := app.Router()
+		r := app.Server().Router()
 
-		// Routes already registered in setup() for auto-serve.
-		// Just add the root page for the web UI.
-		r.Get("/", app.LoginPage(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "text/html")
-			w.Write([]byte(`<!DOCTYPE html>
-<html><head><title>Todo API</title></head>
-<body style="font-family:system-ui;max-width:600px;margin:2rem auto;padding:0 1rem">
-<h1>Todo API</h1>
-<p>Signed in as ` + appbase.Email(r) + `.</p>
-<form method="POST" action="/api/auth/logout" style="margin-bottom:1rem"><button>Sign out</button></form>
-<form onsubmit="event.preventDefault();fetch('/api/todos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:this.t.value})}).then(r=>r.json()).then(()=>{this.t.value='';location.reload()})">
-<input name="t" placeholder="Add a todo..." style="padding:8px;width:70%">
-<button style="padding:8px 16px">Add</button>
-</form>
-<ul id="list"></ul>
-<script>fetch('/api/todos').then(r=>r.json()).then(todos=>{document.getElementById('list').innerHTML=todos.map(t=>'<li>'+t.title+'</li>').join('')}).catch(()=>{})</script>
-</body></html>`))
+		// Serve the Svelte SPA for authenticated users, login page otherwise.
+		// The SPA handles routing client-side — all non-API paths serve index.html.
+		distFS, err := fs.Sub(frontendDist, "frontend/dist")
+		if err != nil {
+			return fmt.Errorf("embedding frontend: %w", err)
+		}
+		fileServer := http.FileServer(http.FS(distFS))
+
+		// Serve static assets (JS, CSS) directly
+		r.Handle("/assets/*", fileServer)
+
+		// Root: login page if unauthenticated, SPA if authenticated
+		r.Get("/*", app.LoginPage(func(w http.ResponseWriter, r *http.Request) {
+			// Serve index.html for all routes (SPA)
+			r.URL.Path = "/"
+			fileServer.ServeHTTP(w, r)
 		}))
 
 		return app.Serve()

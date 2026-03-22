@@ -157,6 +157,13 @@ func (a *App) Server() *server.Server {
 	return a.server
 }
 
+// Handler returns the HTTP handler for the app.
+// Use this for Wails desktop integration (AssetServer.Handler)
+// or any context where you need the raw http.Handler.
+func (a *App) Handler() http.Handler {
+	return a.server.Router()
+}
+
 // Router returns the chi router for registering routes.
 func (a *App) Router() interface {
 	http.Handler
