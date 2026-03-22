@@ -8,8 +8,43 @@
 # every cold start or scale event. Use STORE_TYPE=firestore for
 # production Cloud Run deployments. SQLite is only suitable for
 # testing the deploy pipeline.
+#
+# Secrets are passed via Cloud Run's --set-secrets flag, which mounts
+# them from GCP Secret Manager. They never appear as plaintext env vars
+# in the deploy command or Cloud Run console.
+
+# _push_secret_if_needed — ensure a secret exists in GCP Secret Manager.
+# Reads from OS keychain first, then .env. Skips if value is empty.
+# Usage: _push_secret_if_needed <project> <secret-name> <env-var-name>
+_push_secret_if_needed() {
+    sm_project="$1"
+    secret_name="$2"
+    env_var_name="$3"
+
+    # Get value from env (which was sourced from .env or keychain)
+    eval "val=\$$env_var_name"
+    if [ -z "$val" ]; then
+        return 0
+    fi
+
+    # Check if secret already exists in Secret Manager
+    if gcloud secrets describe "$secret_name" --project="$sm_project" >/dev/null 2>&1; then
+        # Add a new version with the current value
+        printf '%s' "$val" | gcloud secrets versions add "$secret_name" \
+            --project="$sm_project" \
+            --data-file=- 2>/dev/null
+    else
+        # Create the secret
+        printf '%s' "$val" | gcloud secrets create "$secret_name" \
+            --project="$sm_project" \
+            --replication-policy="automatic" \
+            --data-file=- 2>/dev/null
+    fi
+}
 
 # deploy_cloudrun — build and deploy to Cloud Run.
+# Pushes secrets to GCP Secret Manager and mounts them via --set-secrets.
+# Non-secret config is passed via --set-env-vars.
 # After deployment, captures the service URL and adds it to app.json.
 # Usage: deploy_cloudrun <service-name> <project-id> [region]
 deploy_cloudrun() {
@@ -33,30 +68,39 @@ deploy_cloudrun() {
         echo ""
     fi
 
-    # Build env vars — always include store config
+    # Non-secret env vars
     env_vars="STORE_TYPE=$store_type,GOOGLE_CLOUD_PROJECT=$project"
-
-    # Pass OAuth credentials if set (from .env or environment)
-    if [ -n "$GOOGLE_CLIENT_ID" ]; then
-        env_vars="${env_vars},GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID"
-    fi
-    if [ -n "$GOOGLE_CLIENT_SECRET" ]; then
-        env_vars="${env_vars},GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET"
-    fi
-    if [ -n "$GOOGLE_REDIRECT_URL" ]; then
-        env_vars="${env_vars},GOOGLE_REDIRECT_URL=$GOOGLE_REDIRECT_URL"
-    fi
     if [ -n "$ALLOWED_USERS" ]; then
         env_vars="${env_vars},ALLOWED_USERS=$ALLOWED_USERS"
     fi
 
-    gcloud run deploy "$service" \
-        --source . \
-        --project="$project" \
-        --region="$region" \
-        --allow-unauthenticated \
-        --clear-base-image \
-        --set-env-vars="$env_vars"
+    # Push secrets to GCP Secret Manager and build --set-secrets flag
+    secrets_flag=""
+    if [ -n "$GOOGLE_CLIENT_ID" ]; then
+        echo "  Pushing google-client-id to Secret Manager..."
+        _push_secret_if_needed "$project" "google-client-id" "GOOGLE_CLIENT_ID"
+        secrets_flag="GOOGLE_CLIENT_ID=google-client-id:latest"
+    fi
+    if [ -n "$GOOGLE_CLIENT_SECRET" ]; then
+        echo "  Pushing google-client-secret to Secret Manager..."
+        _push_secret_if_needed "$project" "google-client-secret" "GOOGLE_CLIENT_SECRET"
+        if [ -n "$secrets_flag" ]; then
+            secrets_flag="${secrets_flag},GOOGLE_CLIENT_SECRET=google-client-secret:latest"
+        else
+            secrets_flag="GOOGLE_CLIENT_SECRET=google-client-secret:latest"
+        fi
+    fi
+
+    # Build the deploy command
+    deploy_args="--source . --project=$project --region=$region --allow-unauthenticated --clear-base-image"
+    deploy_args="$deploy_args --set-env-vars=$env_vars"
+
+    if [ -n "$secrets_flag" ]; then
+        deploy_args="$deploy_args --set-secrets=$secrets_flag"
+        echo "  Secrets will be mounted from Secret Manager (not as env vars)."
+    fi
+
+    eval gcloud run deploy "$service" $deploy_args
 
     # Capture the service URL and add to app.json
     service_url=$(gcloud run services describe "$service" \
