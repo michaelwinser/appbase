@@ -1,0 +1,29 @@
+examples/todo-store/main.go
+  0e159da3e0bed3fb 1,3-5,9,13-14
+examples/bookmarks/main.go
+  0e159da3e0bed3fb 1-174
+examples/bookmarks/usecases_test.go
+  0e159da3e0bed3fb 1-104
+examples/bookmarks/store.go
+  0e159da3e0bed3fb 1-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "7e70cd99985e6c07849f97ccda1954f0c1e656cc",
+  "prompts": {
+    "0e159da3e0bed3fb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c070a507-3782-4b76-8b23-aa21d56393c4",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 349,
+      "total_deletions": 6,
+      "accepted_lines": 349,
+      "overriden_lines": 0
+    }
+  }
+}
