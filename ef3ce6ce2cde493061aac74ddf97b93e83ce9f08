@@ -1,0 +1,31 @@
+config/appconfig.go
+  0e159da3e0bed3fb 1-275
+config/secrets.go
+  0e159da3e0bed3fb 1-357
+ab
+  0e159da3e0bed3fb 179-199,325,356
+cmd/secret/main.go
+  0e159da3e0bed3fb 1-126
+config/appconfig_test.go
+  0e159da3e0bed3fb 1-226
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "ef3ce6ce2cde493061aac74ddf97b93e83ce9f08",
+  "prompts": {
+    "0e159da3e0bed3fb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c070a507-3782-4b76-8b23-aa21d56393c4",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 1007,
+      "total_deletions": 0,
+      "accepted_lines": 1007,
+      "overriden_lines": 0
+    }
+  }
+}
