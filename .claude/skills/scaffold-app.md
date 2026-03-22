@@ -220,7 +220,25 @@ Edit the Dockerfile `COPY` and `RUN go build` lines to match your app's structur
 
 Copy the CI workflow from appbase's `.github/workflows/ci.yml` and adapt.
 
-### 11. Verify
+### 11. Configure Claude Code permissions
+
+Create `.claude/settings.local.json` to avoid repeated approval prompts:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(go:*)", "Bash(git:*)", "Bash(sh:*)",
+      "Bash(appbase:*)", "Bash(gcloud:*)", "Bash(docker:*)",
+      "Bash(gh:*)", "Bash(oapi-codegen:*)"
+    ]
+  }
+}
+```
+
+See `docs/claude-code-settings.md` in appbase for the full recommended set and explanation.
+
+### 12. Verify
 
 ```bash
 go build ./...
