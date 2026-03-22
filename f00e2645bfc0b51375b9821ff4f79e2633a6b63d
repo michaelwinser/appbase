@@ -1,0 +1,29 @@
+examples/todo-api/main.go
+  0e159da3e0bed3fb 50-55,65-66,96-100,104-105,133-137,141
+cli/autoserve.go
+  0e159da3e0bed3fb 1-65
+cli/cli.go
+  0e159da3e0bed3fb 16,27-34,188-219
+docs/plan-next.md
+  0e159da3e0bed3fb 93-161,164,168,171
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "f00e2645bfc0b51375b9821ff4f79e2633a6b63d",
+  "prompts": {
+    "0e159da3e0bed3fb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c070a507-3782-4b76-8b23-aa21d56393c4",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 199,
+      "total_deletions": 14,
+      "accepted_lines": 199,
+      "overriden_lines": 0
+    }
+  }
+}
