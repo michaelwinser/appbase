@@ -6,10 +6,13 @@ package appbase
 
 import (
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/michaelwinser/appbase/auth"
+	appconfig "github.com/michaelwinser/appbase/config"
 	"github.com/michaelwinser/appbase/db"
 	"github.com/michaelwinser/appbase/server"
 )
@@ -34,7 +37,37 @@ type Config struct {
 }
 
 // New creates a new App with database, auth, and server initialized.
+// If app.yaml exists, loads it and exports config as env vars so that
+// db.New(), auth, and server pick up the settings automatically.
 func New(config Config) (*App, error) {
+	// Load app.yaml if present — sets env vars for downstream components
+	configPath := "app.yaml"
+	if _, err := os.Stat(configPath); err == nil {
+		var secrets appconfig.SecretResolver
+		// Use the default resolver chain (keychain → docker → .env → GCP)
+		gcpProject := os.Getenv("GOOGLE_CLOUD_PROJECT")
+		if gcpProject != "" {
+			secrets = appconfig.DefaultResolver(gcpProject)
+		} else {
+			// Minimal resolver without GCP (local dev)
+			secrets = appconfig.NewChainResolver(
+				&appconfig.KeychainResolver{},
+				&appconfig.DockerSecretResolver{},
+				&appconfig.EnvFileResolver{},
+			)
+		}
+		appCfg, err := appconfig.LoadAppConfig(configPath, secrets)
+		if err != nil {
+			log.Printf("Warning: could not load app.yaml: %v", err)
+		} else {
+			appCfg.SetEnvVars()
+			if config.Name == "" {
+				config.Name = appCfg.Name
+			}
+			log.Printf("Loaded config from app.yaml (env: %s)", appCfg.Env())
+		}
+	}
+
 	// Initialize database
 	database, err := db.New()
 	if err != nil {

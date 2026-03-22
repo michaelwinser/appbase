@@ -267,23 +267,27 @@ cmd_devcontainer() {
 }
 
 cmd_init() {
-    config="app.json"
+    cur_name=""
+    cur_project=""
+    cur_region="us-central1"
+    cur_port="3000"
 
-    # Read existing values if app.json exists
-    if [ -f "$config" ]; then
+    # Read existing values from app.yaml or app.json
+    if [ -f app.yaml ]; then
+        cur_name=$(grep "^name:" app.yaml 2>/dev/null | sed 's/name:[[:space:]]*//')
+        cur_project=$(grep "gcp_project:" app.yaml 2>/dev/null | head -1 | sed 's/.*gcp_project:[[:space:]]*//')
+        cur_port=$(grep "^port:" app.yaml 2>/dev/null | sed 's/port:[[:space:]]*//')
+        info "Updating existing app.yaml"
+    elif [ -f app.json ]; then
         . "$SCRIPT_DIR/deploy/deploy.sh"
         cur_name="$(app_name)"
         cur_project="$(app_gcp_project)"
         cur_region="$(app_region)"
-        info "Updating existing $config"
+        info "Migrating from app.json to app.yaml"
     else
-        cur_name=""
-        cur_project=""
-        cur_region="us-central1"
-        info "Creating $config"
+        info "Creating app.yaml"
     fi
 
-    # Prompt for each value, showing current/default
     printf "App name [${cur_name:-my-app}]: "
     read -r input_name
     name="${input_name:-${cur_name:-my-app}}"
@@ -292,36 +296,53 @@ cmd_init() {
     read -r input_project
     project="${input_project:-${cur_project}}"
 
+    printf "Port [${cur_port:-3000}]: "
+    read -r input_port
+    port="${input_port:-${cur_port:-3000}}"
+
     printf "Region [${cur_region:-us-central1}]: "
     read -r input_region
     region="${input_region:-${cur_region:-us-central1}}"
 
-    # Build urls array — keep existing URLs if present, otherwise default
-    if [ -f "$config" ]; then
-        # Preserve existing urls block from the file
-        existing_urls=$(sed -n '/\"urls\"/,/\]/p' "$config")
-    fi
+    # Write app.yaml
+    cat > app.yaml <<EOF
+name: $name
+port: $port
 
-    if [ -z "$existing_urls" ]; then
-        urls_block="  \"urls\": [
-    \"http://localhost:3000\"
-  ]"
-    else
-        urls_block="$existing_urls"
-    fi
+store:
+  type: sqlite
+  path: data/app.db
 
-    # Write app.json
-    cat > "$config" <<EOF
+environments:
+  local:
+    url: http://localhost:$port
+
+  production:
+    url: https://${name}.run.app
+    store:
+      type: firestore
+      gcp_project: $project
+    auth:
+      client_id: \${secret:google-client-id}
+      client_secret: \${secret:google-client-secret}
+EOF
+
+    success "Wrote app.yaml"
+    cat app.yaml
+
+    # Also write app.json for backward compat with deploy scripts
+    cat > app.json <<EOF
 {
   "name": "$name",
   "gcpProject": "$project",
   "region": "$region",
-  $urls_block
+  "urls": [
+    "http://localhost:$port"
+  ]
 }
 EOF
-
-    success "Wrote $config"
-    cat "$config"
+    echo ""
+    info "Also wrote app.json (deploy script compat)"
 }
 
 cmd_secret() {
