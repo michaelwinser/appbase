@@ -1,19 +1,19 @@
-// Command ab is the appbase CLI tool.
+// Command appbase is the appbase CLI tool.
 //
 // Install:
 //
-//	go install github.com/michaelwinser/appbase/cmd/ab@latest
+//	go install github.com/michaelwinser/appbase/cmd/appbase@latest
 //
 // Usage from any project directory:
 //
-//	ab init                          # create app.yaml
-//	ab secret set <name> <value>     # store secret in OS keychain
-//	ab secret import <creds.json>    # import Google OAuth credentials
-//	ab codegen                       # generate server + client from OpenAPI spec
-//	ab lint-api                      # verify codegen is up to date
-//	ab deploy                        # deploy to Cloud Run
-//	ab provision <email>             # full GCP setup
-//	ab docker up|down|logs           # local Docker
+//	appbase init                          # create app.yaml
+//	appbase secret set <name> <value>     # store secret in OS keychain
+//	appbase secret import <creds.json>    # import Google OAuth credentials
+//	appbase codegen                       # generate server + client from OpenAPI spec
+//	appbase lint-api                      # verify codegen is up to date
+//	appbase deploy                        # deploy to Cloud Run
+//	appbase provision <email>             # full GCP setup
+//	appbase docker up|down|logs           # local Docker
 //
 // Reads app.yaml and app.json from the current working directory.
 package main
@@ -26,7 +26,7 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "ab",
+	Use:   "appbase",
 	Short: "appbase CLI — project management for appbase apps",
 }
 
@@ -48,9 +48,9 @@ func main() {
 func versionCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
-		Short: "Print ab version",
+		Short: "Print appbase version",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println("ab (appbase CLI) v0.1.0")
+			fmt.Println("appbase CLI v0.1.0")
 		},
 	}
 }
