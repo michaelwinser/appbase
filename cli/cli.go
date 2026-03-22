@@ -19,6 +19,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// IsServeCommand is true when the "serve" command is being executed.
+// Check this in your setupFn to set Config.Quiet for non-serve commands.
+var IsServeCommand bool
+
 // CLI wraps a Cobra root command with appbase integration.
 type CLI struct {
 	root    *cobra.Command
@@ -64,6 +68,7 @@ func (c *CLI) addBuiltinCommands() {
 		Use:   "serve",
 		Short: "Start the HTTP server",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			IsServeCommand = true
 			if err := c.setupFn(); err != nil {
 				return err
 			}
@@ -145,6 +150,7 @@ func (c *CLI) SetServeFunc(fn func() error) {
 	for _, cmd := range c.root.Commands() {
 		if cmd.Use == "serve" {
 			cmd.RunE = func(cmd *cobra.Command, args []string) error {
+				IsServeCommand = true
 				if err := c.setupFn(); err != nil {
 					return err
 				}

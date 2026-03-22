@@ -34,7 +34,7 @@ var (
 
 func setup() error {
 	var err error
-	app, err = appbase.New(appbase.Config{Name: "Bookmarks"})
+	app, err = appbase.New(appbase.Config{Name: "Bookmarks", Quiet: !appcli.IsServeCommand})
 	if err != nil {
 		return err
 	}

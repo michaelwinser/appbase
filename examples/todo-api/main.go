@@ -39,7 +39,7 @@ var (
 
 func setup() error {
 	var err error
-	app, err = appbase.New(appbase.Config{Name: "todo-api"})
+	app, err = appbase.New(appbase.Config{Name: "todo-api", Quiet: !appcli.IsServeCommand})
 	if err != nil {
 		return err
 	}

@@ -21,7 +21,7 @@ func setupTestApp(t *testing.T) http.Handler {
 		os.Unsetenv("SQLITE_DB_PATH")
 	})
 
-	a, err := appbase.New(appbase.Config{Name: "Bookmarks"})
+	a, err := appbase.New(appbase.Config{Name: "Bookmarks", Quiet: true})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -6,6 +6,7 @@ package appbase
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -34,12 +35,22 @@ type Config struct {
 
 	// GoogleAuth configures Google OAuth. Nil to use defaults.
 	GoogleAuth *auth.GoogleAuthConfig
+
+	// Quiet suppresses startup log messages (config loading, preflight, etc.).
+	// Useful for CLI commands where log noise is unwanted.
+	Quiet bool
 }
 
 // New creates a new App with database, auth, and server initialized.
 // If app.yaml exists, loads it and exports config as env vars so that
 // db.New(), auth, and server pick up the settings automatically.
 func New(config Config) (*App, error) {
+	// Suppress log output for CLI commands
+	if config.Quiet {
+		log.SetOutput(io.Discard)
+		defer log.SetOutput(os.Stderr)
+	}
+
 	// Load app.yaml if present — sets env vars for downstream components
 	configPath := "app.yaml"
 	if _, err := os.Stat(configPath); err == nil {

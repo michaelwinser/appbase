@@ -34,7 +34,7 @@ var (
 
 func setup() error {
 	var err error
-	app, err = appbase.New(appbase.Config{Name: "Todo"})
+	app, err = appbase.New(appbase.Config{Name: "Todo", Quiet: !appcli.IsServeCommand})
 	if err != nil {
 		return err
 	}

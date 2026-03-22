@@ -170,6 +170,8 @@ cmd_lint_api() {
     fi
 
     # Check 2: Generated code is up to date
+    # oapi-codegen --config writes to the output: path in the config file,
+    # not stdout. So we create temp copies with output: redirected to a temp dir.
     if [ -d api ]; then
         tmpdir=$(mktemp -d)
         trap "rm -rf $tmpdir" EXIT
@@ -178,7 +180,8 @@ cmd_lint_api() {
             export PATH="$PATH:$(go env GOPATH)/bin"
 
             if [ -f oapi-codegen.yaml ]; then
-                oapi-codegen --config oapi-codegen.yaml openapi.yaml > "$tmpdir/server.gen.go" 2>/dev/null
+                sed "s|output:.*|output: $tmpdir/server.gen.go|" oapi-codegen.yaml > "$tmpdir/server-config.yaml"
+                oapi-codegen --config "$tmpdir/server-config.yaml" openapi.yaml 2>/dev/null
                 if ! diff -q api/server.gen.go "$tmpdir/server.gen.go" >/dev/null 2>&1; then
                     echo "  FAIL: api/server.gen.go is out of date. Run: ./ab codegen"
                     errors=$((errors + 1))
@@ -188,7 +191,8 @@ cmd_lint_api() {
             fi
 
             if [ -f oapi-codegen-client.yaml ]; then
-                oapi-codegen --config oapi-codegen-client.yaml openapi.yaml > "$tmpdir/client.gen.go" 2>/dev/null
+                sed "s|output:.*|output: $tmpdir/client.gen.go|" oapi-codegen-client.yaml > "$tmpdir/client-config.yaml"
+                oapi-codegen --config "$tmpdir/client-config.yaml" openapi.yaml 2>/dev/null
                 if ! diff -q api/client.gen.go "$tmpdir/client.gen.go" >/dev/null 2>&1; then
                     echo "  FAIL: api/client.gen.go is out of date. Run: ./ab codegen"
                     errors=$((errors + 1))
