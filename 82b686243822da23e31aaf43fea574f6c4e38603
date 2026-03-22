@@ -1,0 +1,45 @@
+examples/todo-api/frontend/src/App.svelte
+  0e159da3e0bed3fb 1-242
+examples/todo-api/frontend/vite.config.ts
+  0e159da3e0bed3fb 1-15
+examples/todo-api/frontend/svelte.config.js
+  0e159da3e0bed3fb 1-5
+examples/todo-api/frontend/src/main.ts
+  0e159da3e0bed3fb 1-6
+examples/todo-api/frontend/package.json
+  0e159da3e0bed3fb 1-17
+.devcontainer/Dockerfile.frontend
+  0e159da3e0bed3fb 20-23
+examples/todo-api/frontend/tsconfig.json
+  0e159da3e0bed3fb 1-14
+examples/todo-api/frontend/.gitignore
+  0e159da3e0bed3fb 1
+examples/todo-api/frontend/index.html
+  0e159da3e0bed3fb 1-12
+examples/todo-api/frontend/src/lib/api.ts
+  0e159da3e0bed3fb 1-53
+examples/todo-api/main.go
+  0e159da3e0bed3fb 24,26,37-38,68,70-85
+app.go
+  0e159da3e0bed3fb 160-166
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "82b686243822da23e31aaf43fea574f6c4e38603",
+  "prompts": {
+    "0e159da3e0bed3fb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c070a507-3782-4b76-8b23-aa21d56393c4",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 400,
+      "total_deletions": 21,
+      "accepted_lines": 399,
+      "overriden_lines": 0
+    }
+  }
+}
