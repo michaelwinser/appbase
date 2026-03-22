@@ -1,0 +1,25 @@
+examples/todo-api/wails.json
+  0e159da3e0bed3fb 1-12
+examples/todo-api/DESKTOP.md
+  0e159da3e0bed3fb 1-96
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "cb18d161414bfbe1029cc649218032c65539b0d2",
+  "prompts": {
+    "0e159da3e0bed3fb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c070a507-3782-4b76-8b23-aa21d56393c4",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 339,
+      "total_deletions": 13,
+      "accepted_lines": 326,
+      "overriden_lines": 0
+    }
+  }
+}
