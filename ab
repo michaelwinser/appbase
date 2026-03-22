@@ -300,6 +300,23 @@ cmd_init() {
     read -r input_port
     port="${input_port:-${cur_port:-3000}}"
 
+    # Check for port conflicts in sibling projects
+    parent_dir="$(dirname "$SCRIPT_DIR")"
+    conflict=$(grep -rl "^port: $port" "$parent_dir"/*/app.yaml 2>/dev/null | grep -v "$SCRIPT_DIR/app.yaml" || true)
+    if [ -n "$conflict" ]; then
+        echo "  WARNING: Port $port is also used by:"
+        echo "$conflict" | while IFS= read -r f; do
+            dir=$(dirname "$f")
+            echo "    $(basename "$dir") ($f)"
+        done
+        printf "  Continue anyway? [y/N]: "
+        read -r confirm
+        if [ "$confirm" != "y" ] && [ "$confirm" != "Y" ]; then
+            echo "Aborted."
+            exit 1
+        fi
+    fi
+
     printf "Region [${cur_region:-us-central1}]: "
     read -r input_region
     region="${input_region:-${cur_region:-us-central1}}"
