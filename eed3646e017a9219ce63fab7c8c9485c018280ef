@@ -1,0 +1,23 @@
+docs/migration-local-mode.md
+  78f73468b094b081 1-132
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "eed3646e017a9219ce63fab7c8c9485c018280ef",
+  "prompts": {
+    "78f73468b094b081": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1faa2564-fcd5-4053-9d23-44be329f5aa2",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 136,
+      "total_deletions": 0,
+      "accepted_lines": 136,
+      "overriden_lines": 0
+    }
+  }
+}
