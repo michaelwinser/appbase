@@ -18,6 +18,7 @@ const keychainServicePrefix = "appbase/"
 
 func testLoginCmd() *cobra.Command {
 	var email string
+	var dbPath string
 	var serverURL string
 	var appName string
 	var ttl time.Duration
@@ -30,12 +31,16 @@ without a browser OAuth flow. For E2E testing only.
 
 Example:
   ./myapp serve &
-  appbase test-login --server http://localhost:3000 --app myapp
+  appbase test-login --db data/test.db --server http://localhost:3000 --app myapp
   ./myapp list
   ./myapp add "Test item"
-  appbase test-logout --app myapp`,
+  appbase test-logout --app myapp
+  rm data/test.db  # cleanup`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			log.SetOutput(io.Discard)
+			if dbPath != "" {
+				applyDBFlag(cmd)
+			}
 
 			// Resolve app name from flag or project config
 			if appName == "" {
@@ -87,6 +92,7 @@ Example:
 	}
 
 	cmd.Flags().StringVar(&email, "email", "test@example.com", "Email for the test session")
+	cmd.Flags().StringVar(&dbPath, "db", "", "SQLite database path (overrides SQLITE_DB_PATH)")
 	cmd.Flags().StringVar(&serverURL, "server", "", "Server URL (default: from app.yaml or localhost:3000)")
 	cmd.Flags().StringVar(&appName, "app", "", "App name for keychain (default: from app.yaml)")
 	cmd.Flags().DurationVar(&ttl, "ttl", 1*time.Hour, "Session time-to-live")

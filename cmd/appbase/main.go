@@ -30,6 +30,14 @@ var rootCmd = &cobra.Command{
 	Short: "appbase CLI — project management for appbase apps",
 }
 
+// applyDBFlag sets SQLITE_DB_PATH from the --db flag if provided.
+func applyDBFlag(cmd *cobra.Command) {
+	dbPath, _ := cmd.Flags().GetString("db")
+	if dbPath != "" {
+		os.Setenv("SQLITE_DB_PATH", dbPath)
+	}
+}
+
 func main() {
 	rootCmd.AddCommand(secretCmd())
 	rootCmd.AddCommand(codegenCmd())
