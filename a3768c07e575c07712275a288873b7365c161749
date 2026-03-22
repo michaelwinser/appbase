@@ -1,0 +1,27 @@
+cmd/secret/main.go
+  0e159da3e0bed3fb 13,102-155,206
+ab
+  0e159da3e0bed3fb 207,212-217
+docs/secrets.md
+  0e159da3e0bed3fb 37-47,90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "a3768c07e575c07712275a288873b7365c161749",
+  "prompts": {
+    "0e159da3e0bed3fb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c070a507-3782-4b76-8b23-aa21d56393c4",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 75,
+      "total_deletions": 7,
+      "accepted_lines": 75,
+      "overriden_lines": 0
+    }
+  }
+}
