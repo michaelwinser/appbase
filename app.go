@@ -12,6 +12,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/michaelwinser/appbase/auth"
 	appconfig "github.com/michaelwinser/appbase/config"
 	"github.com/michaelwinser/appbase/db"
@@ -48,6 +50,11 @@ type Config struct {
 	//   - DB path defaults to ~/.config/<name>/app.db if not set
 	// Use this for Wails desktop apps or embedded contexts.
 	LocalMode bool
+
+	// AllowedOrigins for CORS on API routes. If empty, no CORS headers are set
+	// (same-origin only). Set to ["*"] for public APIs without authentication.
+	// For authenticated apps, list specific origins (e.g., ["http://localhost:3000"]).
+	AllowedOrigins []string
 }
 
 // New creates a new App with database, auth, and server initialized.
@@ -125,7 +132,7 @@ func New(config Config) (*App, error) {
 	google := auth.NewGoogleAuth(sessions, googleConfig)
 
 	// Initialize server
-	srv := server.New()
+	srv := server.New(server.Config{AllowedOrigins: config.AllowedOrigins})
 
 	// Register auth middleware (must be before any routes)
 	if config.LocalMode {
@@ -212,15 +219,9 @@ func (a *App) LocalHandler() http.Handler {
 }
 
 // Router returns the chi router for registering routes.
-func (a *App) Router() interface {
-	http.Handler
-	Get(string, http.HandlerFunc)
-	Post(string, http.HandlerFunc)
-	Put(string, http.HandlerFunc)
-	Patch(string, http.HandlerFunc)
-	Delete(string, http.HandlerFunc)
-	Handle(string, http.Handler)
-} {
+// Returns chi.Router directly so callers can use Route(), Group(), Mount(),
+// With(), and other chi features without type assertions.
+func (a *App) Router() chi.Router {
 	return a.server.Router()
 }
 
@@ -278,7 +279,7 @@ func (a *App) registerAuthRoutes() {
 			return
 		}
 		server.RespondJSON(w, http.StatusOK, map[string]string{
-			"url": a.google.LoginURL(r),
+			"url": a.google.LoginURL(w, r),
 		})
 	})
 
@@ -295,6 +296,13 @@ func (a *App) registerAuthRoutes() {
 			return
 		}
 
+		// Validate state parameter (CSRF protection)
+		state := r.URL.Query().Get("state")
+		if err := a.google.ValidateState(w, r, state); err != nil {
+			server.RespondError(w, http.StatusForbidden, err.Error())
+			return
+		}
+
 		result, err := a.google.HandleCallback(r, code)
 		if err != nil {
 			server.RespondError(w, http.StatusInternalServerError, err.Error())
@@ -302,7 +310,6 @@ func (a *App) registerAuthRoutes() {
 		}
 
 		// Check if this is a CLI login (state starts with "cli:")
-		state := r.URL.Query().Get("state")
 		if strings.HasPrefix(state, "cli:") {
 			a.cliLogins.Complete(state, result.Session.ID)
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
