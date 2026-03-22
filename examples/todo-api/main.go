@@ -1,3 +1,5 @@
+//go:build !desktop
+
 // Example todo app demonstrating API-first development with OpenAPI codegen.
 //
 // Compare with:
