@@ -14,7 +14,7 @@
 - `./ab docker up|down|logs` — local Docker with SQLite
 - `deploy/` directory with reusable shell functions (`config.sh`, `provision.sh`, `cloudrun.sh`, `docker.sh`)
 - `app.json` stores project identity (name, gcpProject, region, urls)
-- `.env` sourced automatically by `./ab run` and `./ab deploy`
+- Secrets stored in OS keychain; `.env` as CI fallback only
 - Deploy scripts have test coverage (`deploy_test.sh`, 21 tests)
 
 ### 3. Firestore Support in `db` Package

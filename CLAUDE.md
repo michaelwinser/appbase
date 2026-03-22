@@ -176,15 +176,17 @@ Every project has an `app.json` at the repo root:
 
 Create with `./ab init`. Deploy scripts read from this file.
 
-### .env
+### Secrets
 
-Runtime secrets (gitignored). Created during provisioning:
-```
-GOOGLE_CLIENT_ID=...
-GOOGLE_CLIENT_SECRET=...
+Secrets are stored in the OS keychain (never as plaintext on disk):
+```bash
+./ab secret import ~/Downloads/client_secret_*.json  # import from Google
+./ab secret set <name> <value>                       # set individually
+./ab secret list                                     # show all secrets
 ```
 
-`./ab run` and `./ab deploy` source `.env` automatically.
+`./ab run` reads from keychain automatically. `./ab deploy` pushes to GCP Secret Manager.
+`.env` is a fallback for CI/containers without a keychain. See `docs/secrets.md`.
 
 ### Deployment targets
 

@@ -20,7 +20,7 @@ myapp/
 ├── store_firestore.go     # Firestore backend
 ├── handler.go             # HTTP handlers
 ├── usecases_test.go       # Use case tests (UC-XXXX)
-├── .env                   # Local config (gitignored)
+├── .env                   # Fallback for CI (gitignored, prefer OS keychain)
 ├── docs/
 │   └── prd.md             # Product requirements with numbered use cases
 ├── deploy/
@@ -170,13 +170,16 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# Source .env for runtime secrets (GOOGLE_CLIENT_ID, etc.)
-if [ -f "$SCRIPT_DIR/.env" ]; then
-    set -a; . "$SCRIPT_DIR/.env"; set +a
-fi
-
 # Source appbase deploy functions
 . "../appbase/deploy/deploy.sh"
+
+# Load secrets from OS keychain (primary) or .env (CI fallback)
+_load_secrets() {
+    project="$(app_name)"
+    exports=$(go run ../appbase/cmd/secret env "$project" 2>/dev/null || true)
+    if [ -n "$exports" ]; then eval "$exports"; return; fi
+    if [ -f "$SCRIPT_DIR/.env" ]; then set -a; . "$SCRIPT_DIR/.env"; set +a; fi
+}
 
 case "${1:-help}" in
     init)       # Create app.json interactively
@@ -188,14 +191,15 @@ JSON
                 echo "Wrote app.json" ;;
     build)      go build ./... ;;
     test)       go test -v -count=1 ./... ;;
-    serve)      mkdir -p data && go run . serve ;;
+    serve)      _load_secrets && mkdir -p data && go run . serve ;;
     lint)       go vet ./... ;;
     ci)         go vet ./... && go build ./... && go test -v -count=1 ./... ;;
     provision)  provision_gcp "$(app_gcp_project)" "$(app_name)" "$2" ;;
-    deploy)     deploy_cloudrun "$(app_name)" "$(app_gcp_project)" ;;
+    deploy)     _load_secrets && deploy_cloudrun "$(app_name)" "$(app_gcp_project)" ;;
+    secret)     go run ../appbase/cmd/secret "$2" "$(app_name)" ${3:+"$3"} ${4:+"$4"} ;;
     status)     deploy_cloudrun_status "$(app_name)" "$(app_gcp_project)" ;;
     docker)     docker compose -f deploy/docker-compose.yml "${2:-up}" ;;
-    help)       echo "Usage: ./tc [init|build|test|serve|lint|ci|provision|deploy|status|docker|help]" ;;
+    help)       echo "Usage: ./tc [init|build|test|serve|lint|ci|provision|deploy|secret|status|docker|help]" ;;
     *)          echo "Unknown: $1" >&2; exit 1 ;;
 esac
 ```
@@ -229,8 +233,8 @@ go run . list     # Test the CLI
 
 - **Login page is built-in** — use `app.LoginPage(handler)` on your root route. Shows Google sign-in when unauthenticated, your content when authenticated.
 - **Auth is automatic** — appbase middleware handles sessions. Use `appbase.UserID(r)` in handlers.
-- **Config via env vars** — `PORT`, `STORE_TYPE`, `GOOGLE_CLIENT_ID`, etc. See appbase CLAUDE.md.
-- **Schema is yours** — appbase manages sessions table; you manage everything else via `app.Migrate()`.
+- **Secrets in the keychain, not on disk** — `./tc secret set/import` stores in OS keychain. `./tc serve` and `./tc deploy` read from keychain automatically. `.env` is a fallback for CI only. See `docs/secrets.md`.
+- **Schema is yours** — appbase manages sessions table; you manage everything else via `app.Migrate()` or `store.Collection`.
 - **CLI and server share setup** — both call `setup()` which initializes the app and store.
 - **Project identity in app.json** — deploy scripts read name and GCP project from here.
 - **Provisioning is one command** — `./tc provision email@example.com` sets up GCP end-to-end.

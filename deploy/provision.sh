@@ -126,8 +126,9 @@ provision_resources() {
 # Web OAuth clients must be created manually in Cloud Console — there is
 # no public API for this. This function:
 #   1. Creates the consent screen (via gcloud, idempotent)
-#   2. Checks that GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are in .env
-#   3. Prints the redirect URIs that must be configured on the client
+#   2. Checks that credentials are in the OS keychain
+#   3. Validates the client ID matches the GCP project
+#   4. Prints the redirect URIs that must be configured on the client
 provision_oauth() {
     project="$1"
     app_name="$2"
@@ -155,13 +156,16 @@ provision_oauth() {
         --support_email="$support_email" \
         --project="$project" 2>/dev/null || echo "  (Consent screen already exists)"
 
-    # Step 2: Check .env for credentials and validate
+    # Step 2: Check OS keychain for credentials
     oauth_ok=true
     project_number=$(gcloud projects describe "$project" --format="value(projectNumber)" 2>/dev/null || true)
 
-    if [ -f .env ] && grep -q "^GOOGLE_CLIENT_ID=.\+" .env 2>/dev/null; then
-        client_id=$(grep "^GOOGLE_CLIENT_ID=" .env | head -1 | cut -d= -f2-)
-        echo "  GOOGLE_CLIENT_ID is set in .env"
+    # Try to read client ID from keychain via the secret CLI
+    client_id=$(go run ./cmd/secret get "$app_name" google-client-id 2>/dev/null || true)
+    client_secret=$(go run ./cmd/secret get "$app_name" google-client-secret 2>/dev/null || true)
+
+    if [ -n "$client_id" ]; then
+        echo "  google-client-id found in keychain"
 
         # Validate: client ID should be {project_number}-xxx.apps.googleusercontent.com
         if [ -n "$project_number" ]; then
@@ -182,14 +186,14 @@ provision_oauth() {
             esac
         fi
     else
-        echo "  MISSING: GOOGLE_CLIENT_ID not found in .env"
+        echo "  MISSING: google-client-id not found in keychain"
         oauth_ok=false
     fi
 
-    if [ -f .env ] && grep -q "^GOOGLE_CLIENT_SECRET=.\+" .env 2>/dev/null; then
-        echo "  GOOGLE_CLIENT_SECRET is set in .env"
+    if [ -n "$client_secret" ]; then
+        echo "  google-client-secret found in keychain"
     else
-        echo "  MISSING: GOOGLE_CLIENT_SECRET not found in .env"
+        echo "  MISSING: google-client-secret not found in keychain"
         oauth_ok=false
     fi
 
@@ -202,18 +206,21 @@ provision_oauth() {
 
     if [ "$oauth_ok" = false ]; then
         echo ""
-        echo "  ACTION REQUIRED: Create a Web OAuth client in Cloud Console:"
-        echo "    https://console.cloud.google.com/apis/credentials?project=$project"
+        echo "  ACTION REQUIRED:"
         echo ""
-        echo "    1. Click 'Create Credentials' > 'OAuth client ID'"
-        echo "    2. Application type: Web application"
-        echo "    3. Name: ${app_name}-web"
-        echo "    4. Add the redirect URIs listed above"
-        echo "    5. Copy Client ID and Client Secret into .env:"
-        echo "       GOOGLE_CLIENT_ID=<client-id>"
-        echo "       GOOGLE_CLIENT_SECRET=<client-secret>"
+        echo "  1. Create a Web OAuth client in Cloud Console:"
+        echo "     https://console.cloud.google.com/apis/credentials?project=$project"
         echo ""
-        echo "  Then re-run: ./ab provision $support_email"
+        echo "     - Click 'Create Credentials' > 'OAuth client ID'"
+        echo "     - Application type: Web application"
+        echo "     - Name: ${app_name}-web"
+        echo "     - Add the redirect URIs listed above"
+        echo ""
+        echo "  2. Download the credentials JSON and import:"
+        echo "     ./ab secret import ~/Downloads/client_secret_*.json"
+        echo ""
+        echo "  3. Re-run to verify:"
+        echo "     ./ab provision $support_email"
     else
         echo ""
         echo "  OAuth credentials configured."
@@ -266,8 +273,10 @@ provision_gcp() {
     echo "Provisioning complete."
     echo ""
     echo "Next steps:"
-    echo "  1. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env (if not done)"
-    echo "  2. Add redirect URIs in Cloud Console (see above)"
-    echo "  3. Deploy: ./ab deploy"
+    echo "  1. If OAuth credentials are missing (see above):"
+    echo "     - Create OAuth client in Cloud Console"
+    echo "     - ./ab secret import ~/Downloads/client_secret_*.json"
+    echo "     - ./ab provision $support_email   (re-run to verify)"
+    echo "  2. Deploy: ./ab deploy"
     echo "================================================"
 }

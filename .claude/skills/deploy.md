@@ -56,14 +56,16 @@ provision_gcp "my-gcp-project" "my-app" "admin@example.com"
 2. **Billing** (`provision_billing`) — links first available billing account (or specify one)
 3. **API enablement** (`provision_apis`) — enables Cloud Build, Cloud Run, Firestore, Artifact Registry, Secret Manager, IAP
 4. **Resource creation** (`provision_resources`) — creates Firestore database (nam5), Artifact Registry Docker repo
-5. **OAuth credentials** (`provision_oauth`) — creates consent screen and client credentials, reads `urls` from `app.json` to generate redirect URIs, outputs GOOGLE_CLIENT_ID/SECRET and the exact redirect URIs to configure
+5. **OAuth credentials** (`provision_oauth`) — creates consent screen, validates keychain credentials, prints redirect URIs to configure
 
 ### After provisioning:
 
-1. Save GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to `.env`
-2. Add redirect URIs to OAuth client in Cloud Console (provision prints the exact URIs)
-3. The `gcpProject` field in `app.json` is auto-populated
-4. Deploy with `deploy_cloudrun`
+1. Create OAuth client in Cloud Console (provision prints the URL and steps)
+2. Import credentials: `./ab secret import ~/Downloads/client_secret_*.json`
+3. Re-run `./ab provision` to verify credentials are valid
+4. Deploy with `./ab deploy`
+
+Secrets are stored in the OS keychain, never as plaintext on disk. See `docs/secrets.md`.
 
 ### OAuth Redirect URIs
 
@@ -119,7 +121,8 @@ esac
 | File | Purpose |
 |------|---------|
 | `app.json` | Project identity, deployment URLs, OAuth redirect URI source |
-| `.env` | Runtime secrets (GOOGLE_CLIENT_ID, etc.) — gitignored |
+| `docs/secrets.md` | Secret management guide |
+| `cmd/secret/` | Secret CLI (keychain, import, push to GCP) |
 | `deploy/deploy.sh` | Reusable shell functions for provisioning and deployment |
 | `deploy/Dockerfile` | Multi-stage build template |
 | `deploy/docker-compose.yml` | Local/TrueNAS Docker runtime template |
