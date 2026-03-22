@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"os"
 	"testing"
 	"time"
 
@@ -10,11 +9,7 @@ import (
 
 func setupTestSessions(t *testing.T) *SessionStore {
 	t.Helper()
-	os.Setenv("STORE_TYPE", "sqlite")
-	os.Setenv("SQLITE_DB_PATH", ":memory:")
-	t.Cleanup(func() { os.Unsetenv("SQLITE_DB_PATH") })
-
-	database, err := db.New()
+	database, err := db.New(db.DBConfig{StoreType: "sqlite", SQLitePath: ":memory:"})
 	if err != nil {
 		t.Fatal(err)
 	}
