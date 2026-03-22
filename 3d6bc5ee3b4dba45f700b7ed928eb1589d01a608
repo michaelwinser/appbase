@@ -1,0 +1,49 @@
+cli/cli.go
+  78f73468b094b081 27-29,32-35,68,78
+examples/todo/main.go
+  78f73468b094b081 48-52
+config/appconfig.go
+  78f73468b094b081 256
+config/config.go
+  78f73468b094b081 87-88
+examples/todo-store/main.go
+  78f73468b094b081 37-41
+server/server.go
+  78f73468b094b081 25-27,40-45
+testing.go
+  78f73468b094b081 15-18
+auth/google.go
+  78f73468b094b081 40-51,57,61-63,65-72,77-79,101
+app.go
+  78f73468b094b081 58-63,67-68,76-77,82,86,89-92,107,111-129,135-136,162-165
+db/db.go
+  78f73468b094b081 96-128,131,133,135,137
+examples/todo-api/main.go
+  78f73468b094b081 46-50
+db/sqlite.go
+  78f73468b094b081 11
+examples/bookmarks/main.go
+  78f73468b094b081 37-41
+db/firestore.go
+  78f73468b094b081 11,13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "3d6bc5ee3b4dba45f700b7ed928eb1589d01a608",
+  "prompts": {
+    "78f73468b094b081": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1faa2564-fcd5-4053-9d23-44be329f5aa2",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 161,
+      "total_deletions": 62,
+      "accepted_lines": 161,
+      "overriden_lines": 0
+    }
+  }
+}
