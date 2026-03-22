@@ -117,10 +117,17 @@ Ports declared in `app.yaml` instead of external portmanager.
 
 ## Later
 
-### 8. PostgreSQL Support
+### 8. GitHub Actions CI with Workload Identity Federation
+- Zero-secrets CI: GitHub proves identity directly to GCP (no service account keys)
+- `./ab provision` step 6: configure Workload Identity Pool + Provider
+- `./ab ci setup` command to create WIF config and output workflow YAML
+- Update `.github/workflows/ci.yml` to use `google-github-actions/auth` + `deploy-cloudrun`
+- Completes the zero-secrets chain: keychain (dev) → Secret Manager (prod) → WIF (CI auth)
+
+### 9. PostgreSQL Support
 - Third store backend
 - Connection via `DATABASE_URL` env var
 
-### 9. Forgejo CI
+### 10. Forgejo CI
 - Alternative to GitHub Actions
 - Workflow template for Forgejo
