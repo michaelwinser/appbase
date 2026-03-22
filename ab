@@ -176,6 +176,27 @@ EOF
     cat "$config"
 }
 
+cmd_secret() {
+    . "$SCRIPT_DIR/deploy/deploy.sh"
+    project="$(app_name)"
+
+    if [ -z "$1" ]; then
+        echo "Usage: ./ab secret <set|get|delete|list|push> [args...]"
+        echo ""
+        echo "Manage secrets in the OS keychain for project: $project"
+        echo ""
+        echo "Commands:"
+        echo "  set <name> <value>    Store a secret in the keychain"
+        echo "  get <name>            Retrieve a secret"
+        echo "  delete <name>         Remove a secret"
+        echo "  list                  List known secrets"
+        echo "  push <name1,name2>    Push secrets to GCP Secret Manager"
+        exit 1
+    fi
+
+    go run "$SCRIPT_DIR/cmd/secret" "$1" "$project" ${2:+"$2"} ${3:+"$3"}
+}
+
 cmd_ci() {
     info "Running full CI pipeline..."
     cmd_lint
@@ -301,6 +322,7 @@ Deployment (reads name/project from app.json):
   deploy                             Deploy to Cloud Run
   deploy-status                      Show deployment status
   docker [up|down|logs]              Run app in local Docker container
+  secret <set|get|delete|list|push>  Manage secrets in OS keychain
 
 Devcontainer:
   devcontainer build   Build development containers
@@ -331,6 +353,7 @@ shift 2>/dev/null || true
 
 case "$command" in
     init)           cmd_init "$@" ;;
+    secret)         cmd_secret "$@" ;;
     build)          cmd_build "$@" ;;
     test)           cmd_test "$@" ;;
     run)            cmd_run "$@" ;;
