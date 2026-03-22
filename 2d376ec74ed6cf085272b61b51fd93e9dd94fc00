@@ -1,0 +1,27 @@
+store/store_test.go
+  78f73468b094b081 8,21
+examples/todo-api/cmd/desktop/main.go
+  78f73468b094b081 1-2
+db/sqlite.go
+  78f73468b094b081 8,12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "2d376ec74ed6cf085272b61b51fd93e9dd94fc00",
+  "prompts": {
+    "78f73468b094b081": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1faa2564-fcd5-4053-9d23-44be329f5aa2",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 6,
+      "total_deletions": 4,
+      "accepted_lines": 6,
+      "overriden_lines": 0
+    }
+  }
+}
