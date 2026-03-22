@@ -1,0 +1,25 @@
+server/server.go
+  78f73468b094b081 5,11,13-14,64-65,68-81,83-86
+cli/autoserve.go
+  78f73468b094b081 4,46-48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "12ece58ee34e6b454c9fca11c6fb1642d1abdc0b",
+  "prompts": {
+    "78f73468b094b081": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1faa2564-fcd5-4053-9d23-44be329f5aa2",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 28,
+      "total_deletions": 4,
+      "accepted_lines": 28,
+      "overriden_lines": 0
+    }
+  }
+}
