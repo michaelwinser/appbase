@@ -1,0 +1,23 @@
+ab
+  0e159da3e0bed3fb 303-319
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "1b72cb33731c4cb29dbdd90e249e303d888e0f3a",
+  "prompts": {
+    "0e159da3e0bed3fb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c070a507-3782-4b76-8b23-aa21d56393c4",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 17,
+      "total_deletions": 0,
+      "accepted_lines": 17,
+      "overriden_lines": 0
+    }
+  }
+}
