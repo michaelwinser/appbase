@@ -1,0 +1,23 @@
+docs/plan-next.md
+  0e159da3e0bed3fb 34,36,38-306,346,348,350-352,354,363,370,374
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "f5e7d4651f43e613a6b05e58ab964123ec8151c8",
+  "prompts": {
+    "0e159da3e0bed3fb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c070a507-3782-4b76-8b23-aa21d56393c4",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 282,
+      "total_deletions": 39,
+      "accepted_lines": 282,
+      "overriden_lines": 0
+    }
+  }
+}
