@@ -1,0 +1,29 @@
+config/config.go
+  78f73468b094b081 87-88,91
+server/server.go
+  78f73468b094b081 12,106,108-115,118-119
+config/secrets.go
+  78f73468b094b081 205-207,211-217
+db/preflight.go
+  78f73468b094b081 58-59,61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "40134450f5df17579c51e0b9bfb23a99e55cc16e",
+  "prompts": {
+    "78f73468b094b081": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1faa2564-fcd5-4053-9d23-44be329f5aa2",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 28,
+      "overriden_lines": 0
+    }
+  }
+}
