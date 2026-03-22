@@ -1,0 +1,39 @@
+.gitignore
+  0e159da3e0bed3fb 19-21
+examples/todo-api/openapi.yaml
+  0e159da3e0bed3fb 1-127
+examples/todo-api/oapi-codegen.yaml
+  0e159da3e0bed3fb 1-6
+examples/todo-api/oapi-codegen-client.yaml
+  0e159da3e0bed3fb 1-5
+examples/todo-api/store.go
+  0e159da3e0bed3fb 1-53
+examples/todo-api/server.go
+  0e159da3e0bed3fb 1-79
+examples/todo-api/main.go
+  0e159da3e0bed3fb 1-175
+examples/todo-api/usecases_test.go
+  0e159da3e0bed3fb 1-97
+ab
+  0e159da3e0bed3fb 102-148,400-402,426
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "77b2f71b814f89f815b779178ebfac99523c817a",
+  "prompts": {
+    "0e159da3e0bed3fb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c070a507-3782-4b76-8b23-aa21d56393c4",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 600,
+      "total_deletions": 4,
+      "accepted_lines": 596,
+      "overriden_lines": 0
+    }
+  }
+}
