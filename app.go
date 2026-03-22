@@ -109,8 +109,10 @@ func New(config Config) (*App, error) {
 	srv := server.New()
 
 	// Register auth middleware (must be before any routes)
-	srv.Router().Use(auth.Middleware(sessions, nil))
+	// DevAuth runs first — populates context if AUTH_MODE=dev (no-op otherwise)
+	// Regular auth runs second — sees the populated context and passes through
 	srv.Router().Use(auth.DevAuthMiddleware(sessions))
+	srv.Router().Use(auth.Middleware(sessions, nil))
 
 	// Health endpoint
 	srv.Router().Get("/health", func(w http.ResponseWriter, r *http.Request) {
