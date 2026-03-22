@@ -1,0 +1,25 @@
+store/sql.go
+  78f73468b094b081 202,204-206,225,227-229
+store/reflect.go
+  78f73468b094b081 5,177,181-182,186-193,195,199-200,204-207
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "7482d9176466533ce26643653643a5e315ac3858",
+  "prompts": {
+    "78f73468b094b081": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1faa2564-fcd5-4053-9d23-44be329f5aa2",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 55,
+      "overriden_lines": 0
+    }
+  }
+}
