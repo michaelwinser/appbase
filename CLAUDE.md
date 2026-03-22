@@ -94,7 +94,7 @@ appbase/
 ### 1. Import and initialize (API-first pattern, recommended)
 
 ```go
-// Define API in openapi.yaml, generate with: ./tc codegen
+// Define API in openapi.yaml, generate with: ./dev codegen
 // Then implement the generated ServerInterface:
 
 app, _ := appbase.New(appbase.Config{Name: "my-app"})
@@ -167,8 +167,8 @@ See `cli/auth.go` and `cli/autoserve.go`. Desktop mode via `app.Handler()` with 
 ### 5. OpenAPI codegen
 
 ```bash
-./tc codegen    # generates api/server.gen.go + api/client.gen.go
-./tc lint-api   # verifies codegen is up to date, no hand-written routes
+./dev codegen    # generates api/server.gen.go + api/client.gen.go
+./dev lint-api   # verifies codegen is up to date, no hand-written routes
 ```
 
 ## Project Config and Deployment

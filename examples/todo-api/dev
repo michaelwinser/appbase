@@ -1,0 +1,19 @@
+#!/bin/sh
+# todo-api project commands
+# Sources shared template from appbase — bug fixes propagate automatically.
+set -e
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# Source shared dev functions
+. "../../deploy/dev-template.sh"
+
+# App-specific settings
+APP_BINARY_NAME="todo-api"
+
+# Dispatch — add app-specific commands before the fallthrough
+case "${1:-help}" in
+    # Add custom commands here, e.g.:
+    # import)  go run . import "$2" ;;
+    *)  dev_dispatch "$@" ;;
+esac

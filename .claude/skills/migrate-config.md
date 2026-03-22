@@ -16,7 +16,7 @@ trigger: When the user wants to switch from app.json to app.yaml, or asks about 
 
 ## Quick migration
 
-Run `./tc init` (or `./ab init`). If `app.json` exists, it reads the values as defaults and generates both `app.yaml` and `app.json`.
+Run `./dev init` (or `./ab init`). If `app.json` exists, it reads the values as defaults and generates both `app.yaml` and `app.json`.
 
 ## Manual migration
 
@@ -86,4 +86,4 @@ If `app.yaml` doesn't exist, everything works as before via env vars.
 
 The deploy scripts in `deploy/` still read `app.json` via `deploy/config.sh`. This is intentional — shell scripts parse JSON more easily than YAML. Both files should have consistent values for `name`, `gcpProject`, and URLs.
 
-When you run `./tc init`, both files are generated together.
+When you run `./dev init`, both files are generated together.

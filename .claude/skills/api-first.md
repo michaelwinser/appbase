@@ -37,7 +37,7 @@ paths:
 ### 2. Regenerate code
 
 ```bash
-./ab codegen    # or ./tc codegen
+./ab codegen    # or ./dev codegen
 ```
 
 This regenerates:

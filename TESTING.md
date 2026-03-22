@@ -82,13 +82,13 @@ myapp test ./internal/store/...
 
 ```bash
 # All tests suitable for CI
-./tc test
+./dev test
 
 # Just backend
-./tc test backend
+./dev test backend
 
 # Just browser
-./tc test browser
+./dev test browser
 ```
 
 ### In CI (GitHub Actions)

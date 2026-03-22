@@ -26,7 +26,7 @@ myapp/
 ├── deploy/
 │   ├── Dockerfile         # Copy from appbase/deploy/Dockerfile, customize
 │   └── docker-compose.yml # Copy from appbase/deploy/docker-compose.yml
-├── tc                     # Project command script (executable)
+├── dev                    # Project command script (executable)
 └── .github/
     └── workflows/ci.yml   # CI pipeline
 ```
@@ -160,9 +160,14 @@ func TestUseCases(t *testing.T) {
 }
 ```
 
-### 8. Create the Project Script
+### 8. Create the `./dev` Project Script
 
-Create a `./tc` script that wires in appbase deploy functions:
+Every appbase project uses `./dev` as the standard project command script.
+The name is consistent across all projects — nothing to remember.
+
+**Option A: Source the shared template (recommended)**
+
+Sources `deploy/dev-template.sh` from appbase so bug fixes propagate automatically:
 
 ```sh
 #!/bin/sh
@@ -170,41 +175,60 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# Source appbase deploy functions
-. "../appbase/deploy/deploy.sh"
+# Source shared dev functions from appbase
+. "../appbase/deploy/dev-template.sh"
 
-# Load secrets from OS keychain (primary) or .env (CI fallback)
-_load_secrets() {
-    project="$(app_name)"
-    exports=$(go run ../appbase/cmd/secret env "$project" 2>/dev/null || true)
-    if [ -n "$exports" ]; then eval "$exports"; return; fi
-    if [ -f "$SCRIPT_DIR/.env" ]; then set -a; . "$SCRIPT_DIR/.env"; set +a; fi
-}
+# App-specific settings
+APP_BINARY_NAME="myapp"
 
+# Dispatch — add app-specific commands before the fallthrough
 case "${1:-help}" in
-    init)       # Create app.json interactively
-                printf "App name: "; read -r n
-                printf "GCP project: "; read -r p
-                cat > app.json <<JSON
-{ "name": "$n", "gcpProject": "$p", "region": "us-central1", "urls": ["http://localhost:3000"] }
-JSON
-                echo "Wrote app.json" ;;
-    build)      go build ./... ;;
-    test)       go test -v -count=1 ./... ;;
-    serve)      _load_secrets && mkdir -p data && go run . serve ;;
-    lint)       go vet ./... ;;
-    ci)         go vet ./... && go build ./... && go test -v -count=1 ./... ;;
-    provision)  provision_gcp "$(app_gcp_project)" "$(app_name)" "$2" ;;
-    deploy)     _load_secrets && deploy_cloudrun "$(app_name)" "$(app_gcp_project)" ;;
-    secret)     go run ../appbase/cmd/secret "$2" "$(app_name)" ${3:+"$3"} ${4:+"$4"} ;;
-    status)     deploy_cloudrun_status "$(app_name)" "$(app_gcp_project)" ;;
-    docker)     docker compose -f deploy/docker-compose.yml "${2:-up}" ;;
-    help)       echo "Usage: ./tc [init|build|test|serve|lint|ci|provision|deploy|secret|status|docker|help]" ;;
-    *)          echo "Unknown: $1" >&2; exit 1 ;;
+    # import)  go run . import "$2" ;;
+    *)  dev_dispatch "$@" ;;
 esac
 ```
 
-Make it executable: `chmod +x tc`
+The shared template provides: `build`, `test`, `e2e`, `serve`, `codegen`, `lint`, `lint-api`, `ci`, `provision`, `deploy`, `secret`, `docker`, `help`.
+
+Override any command by defining it before the fallthrough:
+```sh
+    build)  go build -tags desktop -o myapp . ;;  # custom build
+    *)      dev_dispatch "$@" ;;                  # everything else
+```
+
+**Option B: Standalone (for projects not adjacent to appbase)**
+
+If using the installed `appbase` CLI (no sibling directory), write `./dev` standalone.
+Delegates shared operations to `appbase`, handles app-specific commands directly:
+
+```sh
+#!/bin/sh
+set -e
+cd "$(dirname "$0")"
+
+case "${1:-help}" in
+    build)      go build -o myapp . ;;
+    test)       go test -v -count=1 ./... ;;
+    serve)      eval "$(appbase secret env 2>/dev/null)" && go run . serve ;;
+    codegen)    appbase codegen ;;
+    lint-api)   appbase lint-api ;;
+    ci)         appbase lint-api && go vet ./... && go build ./... && go test ./... ;;
+    deploy)     appbase deploy ;;
+    secret)     shift; appbase secret "$@" ;;
+    *)          appbase "$@" ;;  # delegate everything else
+esac
+```
+
+Make it executable: `chmod +x dev`
+
+### Migrating from `./tc` to `./dev`
+
+If your project uses `./tc` (the old naming convention):
+1. `mv tc dev` — rename the script
+2. Update any CI/CD scripts that reference `./tc`
+3. Optionally, source the shared template to get automatic updates:
+   - Replace the inline commands with `. "../appbase/deploy/dev-template.sh"` + `dev_dispatch "$@"`
+   - Keep app-specific commands as case entries before the fallthrough
 
 ### 9. Copy Deploy Templates
 

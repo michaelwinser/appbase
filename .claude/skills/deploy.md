@@ -23,7 +23,7 @@ Every app has an `app.json` at the repo root that stores deployment metadata:
 ```
 
 - **name** — Cloud Run service name, login page title
-- **gcpProject** — GCP project ID (auto-populated by `./tc provision`)
+- **gcpProject** — GCP project ID (auto-populated by `./dev provision`)
 - **region** — deployment region (default: us-central1)
 - **urls** — every base URL where the app is reachable. Used to generate OAuth redirect URIs (`<url>/api/auth/callback`). `deploy_cloudrun` adds the Cloud Run URL here automatically after first deploy.
 
@@ -36,7 +36,7 @@ The `scaffold-app` skill creates this file. For existing apps, create it manuall
 | Local CLI | SQLite | `./myapp list` — auto-serve, no setup needed |
 | Local web server | SQLite | `go run . serve` |
 | Local desktop (Wails) | SQLite | Native window via `app.Handler()` |
-| Local Docker | SQLite | `./tc docker up` |
+| Local Docker | SQLite | `./dev docker up` |
 | TrueNAS Docker | SQLite | Copy `deploy/docker-compose.yml`, mount volume |
 | Cloud Run | Firestore | `appbase deploy` |
 
@@ -45,7 +45,7 @@ The `scaffold-app` skill creates this file. For existing apps, create it manuall
 Use `deploy/deploy.sh` functions. The full provisioning runs 5 steps:
 
 ```bash
-# From an app's ./tc script:
+# From an app's ./dev script:
 . "$(dirname "$0")/../appbase/deploy/deploy.sh"
 
 # Full provisioning — creates everything from scratch:
@@ -102,7 +102,7 @@ The `deploy/` directory provides templates:
 docker compose -f deploy/docker-compose.yml up -d --build
 ```
 
-## For the ./tc Script
+## For the ./dev Script
 
 Apps should wire these into their project script:
 

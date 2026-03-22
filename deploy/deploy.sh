@@ -1,7 +1,7 @@
 #!/bin/sh
 # deploy/deploy.sh — appbase deployment functions (entry point)
 #
-# Source this in your app's ./tc script to get all deploy functions:
+# Source this in your app's ./dev script to get all deploy functions:
 #   DEPLOY_DIR="path/to/appbase/deploy"
 #   . "${DEPLOY_DIR}/deploy.sh"
 #
@@ -18,7 +18,7 @@
 # See individual files for documentation.
 
 # Resolve the deploy directory. Callers can set DEPLOY_DIR explicitly,
-# or we derive it from SCRIPT_DIR (set by ./ab and ./tc scripts).
+# or we derive it from SCRIPT_DIR (set by ./ab and ./dev scripts).
 if [ -z "$DEPLOY_DIR" ]; then
     if [ -n "$SCRIPT_DIR" ]; then
         DEPLOY_DIR="$SCRIPT_DIR/deploy"
