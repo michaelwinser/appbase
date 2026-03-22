@@ -52,6 +52,29 @@ func New(name, description string, setupFn func() error) *CLI {
 		Short: description,
 		// Don't print usage on errors from RunE
 		SilenceUsage: true,
+		// Detect local mode for all commands (not just cli.Command()-created ones)
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			if !IsServeCommand {
+				serverFlag, _ := cmd.Flags().GetString("server")
+				if serverFlag == "" {
+					IsLocalMode = true
+					os.Setenv("AUTH_MODE", "dev")
+
+					// Use ~/.appbase/<appname>/ for local mode data
+					dataPath, _ := cmd.Flags().GetString("data")
+					if dataPath == "" {
+						home, _ := os.UserHomeDir()
+						if home != "" {
+							dataPath = home + "/.appbase/" + name
+						}
+					}
+					if dataPath != "" {
+						os.MkdirAll(dataPath, 0755)
+						os.Setenv("SQLITE_DB_PATH", dataPath+"/app.db")
+					}
+				}
+			}
+		},
 	}
 
 	c := &CLI{root: root, setupFn: setupFn}
@@ -111,6 +134,7 @@ func (c *CLI) addBuiltinCommands() {
 
 	// Persistent --server flag for CLI commands that talk to the server
 	c.root.PersistentFlags().String("server", "", "Server URL (default: from keychain or http://localhost:3000)")
+	c.root.PersistentFlags().String("data", "", "Data directory (default: ~/.appbase/<appname>/ in local mode)")
 
 	appName := c.root.Use
 
@@ -183,13 +207,6 @@ func (c *CLI) Command(use, short string, runFn func(cmd *cobra.Command, args []s
 		Short:        short,
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Detect local mode: no --server flag means auto-serve will be used.
-			// Enable dev auth so no login is needed.
-			serverFlag, _ := cmd.Flags().GetString("server")
-			if serverFlag == "" && !IsServeCommand {
-				IsLocalMode = true
-				os.Setenv("AUTH_MODE", "dev")
-			}
 			if err := c.setupFn(); err != nil {
 				return err
 			}

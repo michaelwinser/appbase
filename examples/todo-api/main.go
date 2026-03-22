@@ -97,6 +97,9 @@ func main() {
 		Short: "Add a new todo (via API)",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := setup(); err != nil {
+				return err
+			}
 			serverURL, cleanup, err := appcli.ResolveServerWithAutoServe(cmd, "todo-api")
 			if err != nil {
 				return err
@@ -134,6 +137,9 @@ func main() {
 		Use:   "list",
 		Short: "List todos (via API)",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := setup(); err != nil {
+				return err
+			}
 			serverURL, cleanup, err := appcli.ResolveServerWithAutoServe(cmd, "todo-api")
 			if err != nil {
 				return err
