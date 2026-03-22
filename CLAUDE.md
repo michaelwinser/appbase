@@ -74,13 +74,13 @@ appbase/
 │   ├── Dockerfile         # Multi-stage build template
 │   ├── docker-compose.yml # Runtime compose template
 │   └── deploy_test.sh     # Tests for config/URL functions
-├── examples/              # Example apps
-│   └── todo/              # Complete todo app using all capabilities
-│       ├── main.go
-│       ├── store.go        # Store interface + factory
-│       ├── store_sql.go    # SQLite backend
-│       ├── store_firestore.go # Firestore backend
-│       └── usecases_test.go
+├── cmd/secret/            # Secret management CLI
+│   └── main.go
+├── examples/              # Example apps (progression of patterns)
+│   ├── todo/              # Raw db connections, hand-written routes
+│   ├── todo-store/        # store.Collection, hand-written routes
+│   ├── todo-api/          # OpenAPI spec, generated server + client, CLI auth
+│   └── bookmarks/         # store.Collection, richer entity
 ├── app.json               # Project identity (name, gcpProject, region, urls)
 ├── Dockerfile             # Cloud Run build (builds todo example)
 └── hyrums/                # Consumer contract tests
@@ -89,26 +89,24 @@ appbase/
 
 ## How To Use appbase
 
-### 1. Import and initialize
+### 1. Import and initialize (API-first pattern, recommended)
 
 ```go
-import "github.com/michaelwinser/appbase"
+// Define API in openapi.yaml, generate with: ./tc codegen
+// Then implement the generated ServerInterface:
 
-func main() {
-    app := appbase.New(appbase.Config{
-        Name: "my-app",
-        // DB auto-configured from STORE_TYPE env var
-        // Auth auto-configured from GOOGLE_CLIENT_ID/SECRET env vars
-    })
-    defer app.Close()
-
-    // Register your routes
-    app.Router().Get("/api/things", myHandler)
-
-    // Start serving
-    app.Serve()
-}
+app, _ := appbase.New(appbase.Config{Name: "my-app"})
+myServer := &MyServer{store: myStore}
+api.HandlerFromMux(myServer, app.Server().Router())  // generated routes
+app.Serve()
 ```
+
+For simpler apps without OpenAPI, hand-write routes:
+```go
+app.Router().Get("/api/things", myHandler)
+```
+
+See `examples/todo-api/` for the full API-first pattern, `examples/todo/` for the simple pattern.
 
 ### 2. Use the database
 
@@ -145,19 +143,24 @@ func myHandler(w http.ResponseWriter, r *http.Request) {
 }
 ```
 
-### 4. Build a CLI
+### 4. Build a CLI (API-first)
+
+CLI commands use the generated HTTP client, not direct store access:
 
 ```go
-// Your app adds commands to the base CLI
-app := appbase.New(config)
-app.CLI().AddCommand(&cobra.Command{
-    Use:   "import",
-    Short: "Import data from CSV",
-    Run: func(cmd *cobra.Command, args []string) {
-        // app.DB() is available here too
-    },
-})
-app.CLI().Execute()
+// Built-in commands (automatic): login, logout, whoami, --server flag
+// Your commands use the generated client:
+client, _ := api.NewClientWithResponses(serverURL, api.WithHTTPClient(httpClient))
+resp, _ := client.ListThingsWithResponse(ctx)
+```
+
+CLI auth: `myapp login --server https://my-app.run.app` opens the browser for Google OAuth, stores the session in the OS keychain. See `cli/auth.go`.
+
+### 5. OpenAPI codegen
+
+```bash
+./tc codegen    # generates api/server.gen.go + api/client.gen.go
+./tc lint-api   # verifies codegen is up to date, no hand-written routes
 ```
 
 ## Project Config and Deployment

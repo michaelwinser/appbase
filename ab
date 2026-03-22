@@ -159,6 +159,84 @@ cmd_lint() {
     success "Lint passed"
 }
 
+cmd_lint_api() {
+    info "Checking API-first pattern..."
+    errors=0
+
+    # Check 1: openapi.yaml exists
+    if [ ! -f openapi.yaml ]; then
+        echo "  SKIP: No openapi.yaml found (not an API-first app)"
+        return 0
+    fi
+
+    # Check 2: Generated code is up to date
+    if [ -d api ]; then
+        tmpdir=$(mktemp -d)
+        trap "rm -rf $tmpdir" EXIT
+
+        if command -v oapi-codegen >/dev/null 2>&1 || [ -x "$(go env GOPATH)/bin/oapi-codegen" ]; then
+            export PATH="$PATH:$(go env GOPATH)/bin"
+
+            if [ -f oapi-codegen.yaml ]; then
+                oapi-codegen --config oapi-codegen.yaml openapi.yaml > "$tmpdir/server.gen.go" 2>/dev/null
+                if ! diff -q api/server.gen.go "$tmpdir/server.gen.go" >/dev/null 2>&1; then
+                    echo "  FAIL: api/server.gen.go is out of date. Run: ./ab codegen"
+                    errors=$((errors + 1))
+                else
+                    echo "  OK: api/server.gen.go is up to date"
+                fi
+            fi
+
+            if [ -f oapi-codegen-client.yaml ]; then
+                oapi-codegen --config oapi-codegen-client.yaml openapi.yaml > "$tmpdir/client.gen.go" 2>/dev/null
+                if ! diff -q api/client.gen.go "$tmpdir/client.gen.go" >/dev/null 2>&1; then
+                    echo "  FAIL: api/client.gen.go is out of date. Run: ./ab codegen"
+                    errors=$((errors + 1))
+                else
+                    echo "  OK: api/client.gen.go is up to date"
+                fi
+            fi
+        else
+            echo "  SKIP: oapi-codegen not installed (cannot verify generated code)"
+        fi
+    fi
+
+    # Check 3: No hand-written /api/ route registrations
+    # Look for r.Get("/api/...", r.Post("/api/...", etc. outside of generated code and test files
+    handwritten=$(grep -rn '\.Get("/api/\|\.Post("/api/\|\.Put("/api/\|\.Delete("/api/\|\.Patch("/api/' \
+        --include="*.go" \
+        --exclude="*_test.go" \
+        --exclude="*.gen.go" \
+        --exclude="app.go" \
+        . 2>/dev/null | grep -v "/api/auth/" || true)
+
+    if [ -n "$handwritten" ]; then
+        echo "  WARN: Hand-written /api/ routes found (should be in openapi.yaml):"
+        echo "$handwritten" | while IFS= read -r line; do
+            echo "    $line"
+        done
+        # Warning, not error — there may be legitimate exceptions
+    else
+        echo "  OK: No hand-written /api/ routes"
+    fi
+
+    # Check 4: Server interface implementation exists
+    if [ -d api ] && ! grep -rq "ServerInterface" --include="*.go" --exclude="*.gen.go" . 2>/dev/null; then
+        echo "  FAIL: No ServerInterface implementation found"
+        errors=$((errors + 1))
+    else
+        if [ -d api ]; then
+            echo "  OK: ServerInterface implementation found"
+        fi
+    fi
+
+    if [ "$errors" -gt 0 ]; then
+        error "API lint: $errors error(s) found"
+    else
+        success "API lint passed"
+    fi
+}
+
 cmd_devcontainer() {
     action="${1:-build}"
     case "$action" in
@@ -375,6 +453,7 @@ Development:
   build                Build all packages
   test [target]        Run tests (all, unit, hyrums, example)
   lint                 Run go vet
+  lint-api             Verify OpenAPI codegen is up to date, no hand-written routes
   ci                   Run full CI pipeline (lint + build + test)
 
 Example App:
@@ -429,6 +508,7 @@ case "$command" in
     test)           cmd_test "$@" ;;
     run)            cmd_run "$@" ;;
     lint)           cmd_lint "$@" ;;
+    lint-api)       cmd_lint_api "$@" ;;
     ci)             cmd_ci "$@" ;;
     provision)      cmd_provision "$@" ;;
     deploy)         cmd_deploy "$@" ;;

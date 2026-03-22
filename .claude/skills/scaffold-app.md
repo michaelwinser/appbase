@@ -229,12 +229,22 @@ go run . serve    # Test the server — login page at /
 go run . list     # Test the CLI
 ```
 
+## Choosing a Pattern
+
+| Pattern | When to use | Example |
+|---------|------------|---------|
+| **API-first (recommended)** | Apps with a web UI, CLI client, or external consumers | `examples/todo-api/` |
+| **Hand-written routes** | Simple apps, internal tools, prototypes | `examples/todo-store/` |
+
+For API-first apps, see the `api-first` skill for the full workflow. The key difference: define endpoints in `openapi.yaml` first, then generate server + client code.
+
 ## Key Patterns
 
 - **Login page is built-in** — use `app.LoginPage(handler)` on your root route. Shows Google sign-in when unauthenticated, your content when authenticated.
 - **Auth is automatic** — appbase middleware handles sessions. Use `appbase.UserID(r)` in handlers.
+- **CLI uses the API** — CLI commands should use the generated HTTP client (not direct store access). This ensures the CLI tests the same code path as the web UI. Use `appcli.AuthenticatedClient()` for auth.
 - **Secrets in the keychain, not on disk** — `./tc secret set/import` stores in OS keychain. `./tc serve` and `./tc deploy` read from keychain automatically. `.env` is a fallback for CI only. See `docs/secrets.md`.
-- **Schema is yours** — appbase manages sessions table; you manage everything else via `app.Migrate()` or `store.Collection`.
-- **CLI and server share setup** — both call `setup()` which initializes the app and store.
+- **Schema is yours** — appbase manages sessions table; you manage everything else via `store.Collection`.
 - **Project identity in app.json** — deploy scripts read name and GCP project from here.
 - **Provisioning is one command** — `./tc provision email@example.com` sets up GCP end-to-end.
+- **Lint the API pattern** — `./tc lint-api` verifies codegen is up to date and no hand-written routes.
