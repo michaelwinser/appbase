@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"net/http"
@@ -42,7 +43,9 @@ func AutoServe(handler http.Handler) (url string, stop func(), err error) {
 	}
 
 	stop = func() {
-		srv.Close()
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		srv.Shutdown(ctx)
 	}
 
 	return url, stop, nil

@@ -2,13 +2,16 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
-
+	"syscall"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -58,11 +61,29 @@ func (s *Server) Router() chi.Router {
 	return s.router
 }
 
-// Serve starts the HTTP server. Blocks until the server exits.
+// Serve starts the HTTP server with graceful shutdown on SIGINT/SIGTERM.
+// Blocks until the server exits. In-flight requests get 10 seconds to complete.
 func (s *Server) Serve() error {
 	addr := fmt.Sprintf(":%s", s.port)
+	srv := &http.Server{Addr: addr, Handler: s.router}
+
+	// Shutdown on signal
+	done := make(chan error, 1)
+	go func() {
+		sigCh := make(chan os.Signal, 1)
+		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+		<-sigCh
+		log.Println("Shutting down gracefully...")
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		done <- srv.Shutdown(ctx)
+	}()
+
 	log.Printf("Server starting on %s", addr)
-	return http.ListenAndServe(addr, s.router)
+	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+		return err
+	}
+	return <-done
 }
 
 // Port returns the configured port.
