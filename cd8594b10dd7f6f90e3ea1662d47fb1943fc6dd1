@@ -1,0 +1,49 @@
+examples/todo/main.go
+  78f73468b094b081 94,105
+cli/autoserve.go
+  78f73468b094b081 11,51
+cli/transport_test.go
+  78f73468b094b081 1-131
+cli/cli.go
+  78f73468b094b081 32,219
+app.go
+  78f73468b094b081 29,43-50,63-72,131-141,160,190,195-211,248-260
+examples/todo-api/main.go
+  78f73468b094b081 55,101,107,135,141
+examples/bookmarks/main.go
+  78f73468b094b081 87,97
+cli/transport.go
+  78f73468b094b081 1-74
+auth/middleware.go
+  78f73468b094b081 17-24
+auth/devauth.go
+  78f73468b094b081 11
+CLAUDE.md
+  78f73468b094b081 155-157,159,163,167,216-257,267
+.claude/skills/review-arch.md
+  78f73468b094b081 1-75
+examples/todo-api/cmd/desktop/main.go
+  78f73468b094b081 32,53
+examples/todo-store/main.go
+  78f73468b094b081 83,94
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "cd8594b10dd7f6f90e3ea1662d47fb1943fc6dd1",
+  "prompts": {
+    "78f73468b094b081": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1faa2564-fcd5-4053-9d23-44be329f5aa2",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 436,
+      "total_deletions": 78,
+      "accepted_lines": 419,
+      "overriden_lines": 0
+    }
+  }
+}
