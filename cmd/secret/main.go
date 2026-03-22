@@ -98,6 +98,21 @@ func main() {
 			fmt.Println("No secrets found.")
 		}
 
+	case "env":
+		// Output export statements for known secret names.
+		// Used by shell scripts: eval "$(go run ./cmd/secret env project)"
+		secretNames := []struct{ keychain, envVar string }{
+			{"google-client-id", "GOOGLE_CLIENT_ID"},
+			{"google-client-secret", "GOOGLE_CLIENT_SECRET"},
+			{"google-redirect-url", "GOOGLE_REDIRECT_URL"},
+		}
+		for _, s := range secretNames {
+			val, err := keychain.Get(project, s.keychain)
+			if err == nil && val != "" {
+				fmt.Printf("export %s='%s'\n", s.envVar, val)
+			}
+		}
+
 	case "push":
 		// Push keychain secrets to GCP Secret Manager
 		if len(os.Args) < 4 {
@@ -133,5 +148,6 @@ Commands:
   get <project> <name>            Retrieve a secret from the keychain
   delete <project> <name>         Remove a secret from the keychain
   list <project>                  List known secrets (.env and GCP)
+  env <project>                   Output export statements for shell eval
   push <project> <name1,name2>    Push keychain secrets to GCP Secret Manager`)
 }

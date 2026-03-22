@@ -28,6 +28,33 @@ success() { printf "${GREEN}✓${NC} %s\n" "$1"; }
 error() { printf "${RED}✗${NC} %s\n" "$1" >&2; exit 1; }
 
 # ===========================================
+# Helpers
+# ===========================================
+
+# _load_secrets — load secrets into env vars for the current process.
+# Priority: OS keychain → .env fallback.
+# The keychain is the primary store. .env is for CI or environments
+# without a keychain.
+_load_secrets() {
+    . "$SCRIPT_DIR/deploy/deploy.sh"
+    project="$(app_name)"
+
+    # Try keychain first (outputs export statements)
+    keychain_exports=$(go run "$SCRIPT_DIR/cmd/secret" env "$project" 2>/dev/null || true)
+    if [ -n "$keychain_exports" ]; then
+        eval "$keychain_exports"
+        return
+    fi
+
+    # Fallback to .env for CI / containers
+    if [ -f "$SCRIPT_DIR/.env" ]; then
+        set -a
+        . "$SCRIPT_DIR/.env"
+        set +a
+    fi
+}
+
+# ===========================================
 # Commands
 # ===========================================
 
@@ -75,11 +102,7 @@ cmd_test() {
 cmd_run() {
     info "Running todo example..."
     mkdir -p data
-    if [ -f "$SCRIPT_DIR/.env" ]; then
-        set -a
-        . "$SCRIPT_DIR/.env"
-        set +a
-    fi
+    _load_secrets
     go run ./examples/todo "$@"
 }
 
@@ -248,12 +271,8 @@ USAGE
 cmd_deploy() {
     . "$SCRIPT_DIR/deploy/deploy.sh"
 
-    # Source .env for OAuth credentials if present
-    if [ -f "$SCRIPT_DIR/.env" ]; then
-        set -a
-        . "$SCRIPT_DIR/.env"
-        set +a
-    fi
+    # Load secrets from keychain (primary) or .env (fallback)
+    _load_secrets
 
     # Read from app.json, allow CLI overrides
     name="${1:-$(app_name)}"
