@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// Deprecated: Use appbase.Config{LocalMode: true} with in-process transport instead.
 // DevAuthMiddleware auto-authenticates requests when AUTH_MODE=dev.
 // Creates a session for the configured dev email (DEV_USER_EMAIL or "dev@localhost")
 // and sets the session cookie. Only active when AUTH_MODE=dev.

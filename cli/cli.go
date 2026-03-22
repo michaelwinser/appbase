@@ -29,6 +29,7 @@ var IsServeCommand bool
 // without requiring OAuth login. Check this in setupFn if you need to know.
 var IsLocalMode bool
 
+// Deprecated: Use ClientForCommand with an in-process handler transport instead.
 // AutoServeHandler is set by the app after setup to enable auto-serve.
 // When a CLI command runs without --server, the CLI starts an ephemeral
 // server using this handler, runs the command, and tears down.
@@ -215,6 +216,7 @@ func (c *CLI) Command(use, short string, runFn func(cmd *cobra.Command, args []s
 	}
 }
 
+// Deprecated: Use ClientForCommand instead.
 // ResolveServerWithAutoServe returns a server URL, starting an ephemeral
 // server if needed. Call the returned cleanup function when done.
 //

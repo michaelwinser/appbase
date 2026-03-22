@@ -26,6 +26,7 @@ type App struct {
 	server    *server.Server
 	cliLogins *auth.CLILoginStore
 	name      string
+	localMode bool
 }
 
 // Config configures an appbase application.
@@ -39,6 +40,14 @@ type Config struct {
 	// Quiet suppresses startup log messages (config loading, preflight, etc.).
 	// Useful for CLI commands where log noise is unwanted.
 	Quiet bool
+
+	// LocalMode configures the app for local/desktop use without OAuth.
+	// When true:
+	//   - DevAuth middleware is skipped (identity injected at transport layer)
+	//   - /api/auth/status always returns logged-in
+	//   - DB path defaults to ~/.config/<name>/app.db if not set
+	// Use this for Wails desktop apps or embedded contexts.
+	LocalMode bool
 }
 
 // New creates a new App with database, auth, and server initialized.
@@ -49,6 +58,16 @@ func New(config Config) (*App, error) {
 	if config.Quiet {
 		log.SetOutput(io.Discard)
 		defer log.SetOutput(os.Stderr)
+	}
+
+	// LocalMode: set up DB path if not already configured
+	if config.LocalMode && os.Getenv("SQLITE_DB_PATH") == "" {
+		home, _ := os.UserHomeDir()
+		if home != "" && config.Name != "" {
+			dataDir := home + "/.config/" + config.Name
+			os.MkdirAll(dataDir, 0755)
+			os.Setenv("SQLITE_DB_PATH", dataDir+"/app.db")
+		}
 	}
 
 	// Load app.yaml if present — sets env vars for downstream components
@@ -109,10 +128,17 @@ func New(config Config) (*App, error) {
 	srv := server.New()
 
 	// Register auth middleware (must be before any routes)
-	// DevAuth runs first — populates context if AUTH_MODE=dev (no-op otherwise)
-	// Regular auth runs second — sees the populated context and passes through
-	srv.Router().Use(auth.DevAuthMiddleware(sessions))
-	srv.Router().Use(auth.Middleware(sessions, nil))
+	if config.LocalMode {
+		// LocalMode: no DevAuth, no session middleware.
+		// Identity is injected at the transport layer:
+		//   - CLI: handlerTransport injects identity per-request
+		//   - Desktop: LocalHandler() wraps the handler with identity injection
+	} else {
+		// DevAuth runs first — populates context if AUTH_MODE=dev (no-op otherwise)
+		// Regular auth runs second — sees the populated context and passes through
+		srv.Router().Use(auth.DevAuthMiddleware(sessions))
+		srv.Router().Use(auth.Middleware(sessions, nil))
+	}
 
 	// Health endpoint
 	srv.Router().Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -131,6 +157,7 @@ func New(config Config) (*App, error) {
 		server:    srv,
 		cliLogins: auth.NewCLILoginStore(),
 		name:      name,
+		localMode: config.LocalMode,
 	}
 
 	// Register auth routes
@@ -160,10 +187,28 @@ func (a *App) Server() *server.Server {
 }
 
 // Handler returns the HTTP handler for the app.
-// Use this for Wails desktop integration (AssetServer.Handler)
-// or any context where you need the raw http.Handler.
+// For desktop/embedded use with LocalMode, use LocalHandler() instead.
 func (a *App) Handler() http.Handler {
 	return a.server.Router()
+}
+
+// LocalHandler returns an http.Handler that injects local user identity
+// into every request at the transport boundary. Use this for Wails desktop
+// integration or any in-process context where there is no handlerTransport.
+//
+//	wails.Run(&options.App{
+//	    AssetServer: &assetserver.Options{Handler: app.LocalHandler()},
+//	})
+func (a *App) LocalHandler() http.Handler {
+	email := "dev@localhost"
+	if e := os.Getenv("DEV_USER_EMAIL"); e != "" {
+		email = e
+	}
+	handler := a.server.Router()
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := auth.WithIdentity(r.Context(), email, email)
+		handler.ServeHTTP(w, r.WithContext(ctx))
+	})
 }
 
 // Router returns the chi router for registering routes.
@@ -200,6 +245,19 @@ func (a *App) registerAuthRoutes() {
 
 	// Auth status — works with or without session
 	r.Get("/api/auth/status", func(w http.ResponseWriter, r *http.Request) {
+		// LocalMode: always report as logged in
+		if a.localMode {
+			email := auth.Email(r)
+			if email == "" {
+				email = "dev@localhost"
+			}
+			server.RespondJSON(w, http.StatusOK, map[string]interface{}{
+				"loggedIn": true,
+				"email":    email,
+			})
+			return
+		}
+
 		uid := auth.UserID(r)
 		if uid == "" {
 			server.RespondJSON(w, http.StatusOK, map[string]interface{}{

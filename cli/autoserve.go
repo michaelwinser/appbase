@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// Deprecated: Use ClientForCommand with an in-process handler transport instead.
 // AutoServe starts an HTTP handler on a random port and returns the URL.
 // The server runs in a goroutine. Call the returned stop function to shut it down.
 //
@@ -47,6 +48,7 @@ func AutoServe(handler http.Handler) (url string, stop func(), err error) {
 	return url, stop, nil
 }
 
+// Deprecated: Use appbase.Config{LocalMode: true} instead.
 // SetupLocalMode configures the environment for local/desktop mode:
 // creates ~/.config/<appname>/, sets SQLITE_DB_PATH, sets AUTH_MODE=dev.
 // Call this before appbase.New() in desktop or embedded contexts that

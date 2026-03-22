@@ -84,7 +84,7 @@ func main() {
 		if len(args) > 2 {
 			tags = args[2]
 		}
-		b, err := bookmarks.Create("cli-user", args[0], args[1], tags)
+		b, err := bookmarks.Create(appcli.LocalUserID(), args[0], args[1], tags)
 		if err != nil {
 			return err
 		}
@@ -94,7 +94,7 @@ func main() {
 	cli.AddCommand(addCmd)
 
 	listCmd := cli.Command("list", "List bookmarks", func(cmd *cobra.Command, args []string) error {
-		items, err := bookmarks.List("cli-user")
+		items, err := bookmarks.List(appcli.LocalUserID())
 		if err != nil {
 			return err
 		}

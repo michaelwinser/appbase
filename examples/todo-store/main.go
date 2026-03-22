@@ -80,7 +80,7 @@ func main() {
 		if len(args) == 0 {
 			return fmt.Errorf("title is required: todo add \"Buy groceries\"")
 		}
-		todo, err := todos.Create("cli-user", args[0])
+		todo, err := todos.Create(appcli.LocalUserID(), args[0])
 		if err != nil {
 			return err
 		}
@@ -91,7 +91,7 @@ func main() {
 
 	// CLI: list todos
 	listCmd := cli.Command("list", "List all todos", func(cmd *cobra.Command, args []string) error {
-		items, err := todos.List("cli-user")
+		items, err := todos.List(appcli.LocalUserID())
 		if err != nil {
 			return err
 		}

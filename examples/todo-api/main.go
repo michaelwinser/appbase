@@ -24,7 +24,6 @@ import (
 	"embed"
 	"fmt"
 	"io/fs"
-	"log"
 	"net/http"
 
 	"github.com/spf13/cobra"
@@ -53,10 +52,9 @@ func setup() error {
 		return err
 	}
 
-	// Register routes for auto-serve (CLI commands without --server)
+	// Register API routes
 	todoServer := &TodoServer{Store: todoStore}
 	api.HandlerFromMux(todoServer, app.Server().Router())
-	appcli.AutoServeHandler = app.Server().Router()
 
 	return nil
 }
@@ -100,19 +98,13 @@ func main() {
 			if err := setup(); err != nil {
 				return err
 			}
-			serverURL, cleanup, err := appcli.ResolveServerWithAutoServe(cmd, "todo-api")
+			httpClient, baseURL, cleanup, err := appcli.ClientForCommand(cmd, "todo-api", app.Handler())
 			if err != nil {
 				return err
 			}
 			defer cleanup()
 
-			httpClient, err := appcli.AuthenticatedClient("todo-api")
-			if err != nil {
-				// Auto-serve mode: use a plain client (no auth needed for local)
-				httpClient = http.DefaultClient
-			}
-
-			client, err := api.NewClientWithResponses(serverURL, api.WithHTTPClient(httpClient))
+			client, err := api.NewClientWithResponses(baseURL, api.WithHTTPClient(httpClient))
 			if err != nil {
 				return err
 			}
@@ -140,18 +132,13 @@ func main() {
 			if err := setup(); err != nil {
 				return err
 			}
-			serverURL, cleanup, err := appcli.ResolveServerWithAutoServe(cmd, "todo-api")
+			httpClient, baseURL, cleanup, err := appcli.ClientForCommand(cmd, "todo-api", app.Handler())
 			if err != nil {
 				return err
 			}
 			defer cleanup()
 
-			httpClient, err := appcli.AuthenticatedClient("todo-api")
-			if err != nil {
-				httpClient = http.DefaultClient
-			}
-
-			client, err := api.NewClientWithResponses(serverURL, api.WithHTTPClient(httpClient))
+			client, err := api.NewClientWithResponses(baseURL, api.WithHTTPClient(httpClient))
 			if err != nil {
 				return err
 			}
@@ -182,14 +169,4 @@ func main() {
 	cliApp.AddCommand(listCmd)
 
 	cliApp.Execute()
-}
-
-func init() {
-	if err := ensureDataDir(); err != nil {
-		log.Printf("Warning: could not create data directory: %v", err)
-	}
-}
-
-func ensureDataDir() error {
-	return nil
 }

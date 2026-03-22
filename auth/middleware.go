@@ -14,6 +14,14 @@ const (
 	CookieName            = "app_session"
 )
 
+// WithIdentity returns a context with the given user identity set.
+// Used by in-process transports to inject identity without sessions.
+func WithIdentity(ctx context.Context, userID, email string) context.Context {
+	ctx = context.WithValue(ctx, userIDKey, userID)
+	ctx = context.WithValue(ctx, emailKey, email)
+	return ctx
+}
+
 // UserID returns the authenticated user's ID from the request context.
 func UserID(r *http.Request) string {
 	if v, ok := r.Context().Value(userIDKey).(string); ok {

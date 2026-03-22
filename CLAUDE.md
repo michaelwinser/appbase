@@ -152,19 +152,19 @@ func myHandler(w http.ResponseWriter, r *http.Request) {
 CLI commands use the generated HTTP client, not direct store access:
 
 ```go
-// Built-in: login, logout, whoami, --server flag, auto-serve
-// Your commands use the generated client:
-serverURL, cleanup, _ := appcli.ResolveServerWithAutoServe(cmd, "myapp")
+// Built-in: login, logout, whoami, --server flag
+// Your commands use ClientForCommand for the right transport:
+httpClient, baseURL, cleanup, _ := appcli.ClientForCommand(cmd, "myapp", app.Handler())
 defer cleanup()
-client, _ := api.NewClientWithResponses(serverURL, api.WithHTTPClient(httpClient))
+client, _ := api.NewClientWithResponses(baseURL, api.WithHTTPClient(httpClient))
 ```
 
 **Three runtime modes (automatic):**
-- `myapp list` — local mode: auto-starts ephemeral server, no login needed
+- `myapp list` — local mode: in-process handler transport, no login needed
 - `myapp serve` — web server: persistent HTTP server with full OAuth
 - `myapp list --server https://prod.app` — remote: uses keychain session
 
-See `cli/auth.go` and `cli/autoserve.go`. Desktop mode via `app.Handler()` with Wails (see `examples/todo-api/DESKTOP.md`).
+See `cli/transport.go` and `cli/auth.go`. Desktop mode via `app.LocalHandler()` with Wails (see `examples/todo-api/DESKTOP.md`).
 
 ### 5. OpenAPI codegen
 
@@ -213,6 +213,48 @@ Secrets are stored in the OS keychain (never as plaintext on disk):
 
 `./ab provision user@example.com` — creates GCP project, enables APIs, creates Firestore DB, validates OAuth credentials. Reads name/project from `app.json`.
 
+## Architectural Invariants
+
+These are hard rules. If a change would violate one, stop and check with the user.
+
+### Identity injection happens at the transport layer, never in middleware
+
+User identity enters the handler via the boundary between caller and handler:
+- **CLI local:** `handlerTransport.RoundTrip()` sets context via `auth.WithIdentity()`
+- **Desktop/Wails:** `app.LocalHandler()` wraps handler, sets context via `auth.WithIdentity()`
+- **CLI remote:** session cookie via keychain (`sessionCookieJar`)
+- **Web server:** OAuth session cookie via `auth.Middleware`
+
+**Never** add middleware that creates sessions, sets cookies, or injects identity for local/desktop mode. That's what DevAuth did and it's deprecated. If a new mode doesn't have a transport layer, create one — don't fall back to middleware.
+
+See `docs/architecture-local-mode.md` for the full design and rationale.
+
+### Config flows down explicitly, not via os.Setenv
+
+Don't propagate configuration by mutating the process environment. Pass config values explicitly through function parameters or struct fields. `os.Setenv` in library code is a concurrency hazard and makes data flow invisible. (Issue #11 tracks the remaining violations.)
+
+### The handler is the API contract, HTTP is just one transport
+
+All runtime modes (server, CLI, desktop, tests) go through the same `http.Handler`. The handler doesn't know which transport is calling it. Don't add mode-specific behavior inside handlers — handle mode differences at the transport/caller layer.
+
+### Watch areas — where shortcuts cause architectural problems
+
+These specific areas have caused problems before. Extra scrutiny here:
+
+- **auth/ middleware chain** — Tempting to add "just one more middleware" for a new mode. Don't. New modes get new transports.
+- **cli/ local mode setup** — Tempting to set env vars to configure things. Pass config explicitly instead.
+- **app.go New()** — Tempting to add conditional middleware chains. Keep `New()` mode-agnostic where possible; mode-specific behavior belongs at the edges (transport, handler wrappers).
+- **Desktop/Wails integration** — Tempting to override auth endpoints to "make it work." Use `LocalHandler()` instead.
+
+### Shortcut check
+
+Before implementing a workaround or quick fix, ask:
+1. Is this a shortcut around an architectural boundary?
+2. Is there a solution that follows the established pattern?
+3. Why am I taking the shortcut — is the pattern genuinely insufficient, or am I avoiding the harder solution?
+
+If the pattern is insufficient, that's a design discussion — check with the user. Don't silently work around it.
+
 ## For AI Sessions (Claude Code)
 
 When working on appbase:
@@ -222,6 +264,7 @@ When working on appbase:
 3. **The todo example must always work** — it's the integration test
 4. **Run `go test ./...` before committing** — every package should have tests
 5. **Consumer tests in `hyrums/`** — dependent apps add tests here that validate their assumptions. Don't break them.
+6. **Run `/review-arch` before committing architectural changes** — validates changes against invariants above
 
 When working on an app that uses appbase:
 
