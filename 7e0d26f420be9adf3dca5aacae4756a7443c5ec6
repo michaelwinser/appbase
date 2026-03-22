@@ -1,0 +1,31 @@
+deploy/provision.sh
+  0e159da3e0bed3fb 129-131,159,163-165,167-168,189,193-194,196,209-212,214-217,219-220,222-223,276-280
+.claude/skills/scaffold-app.md
+  0e159da3e0bed3fb 23,176-183,194,198-199,202,236-237
+CLAUDE.md
+  0e159da3e0bed3fb 179,181-185,188-189
+.claude/skills/deploy.md
+  0e159da3e0bed3fb 59,63-68,124-125
+docs/plan-next.md
+  0e159da3e0bed3fb 17
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "7e0d26f420be9adf3dca5aacae4756a7443c5ec6",
+  "prompts": {
+    "0e159da3e0bed3fb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c070a507-3782-4b76-8b23-aa21d56393c4",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 65,
+      "total_deletions": 47,
+      "accepted_lines": 65,
+      "overriden_lines": 0
+    }
+  }
+}
