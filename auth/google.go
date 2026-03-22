@@ -1,6 +1,10 @@
 package auth
 
 import (
+	"crypto/hmac"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +15,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+)
+
+const (
+	// stateCookieName is the cookie used to store the OAuth state for CSRF validation.
+	stateCookieName = "oauth_state"
+	// stateMaxAge is how long the state cookie is valid (10 minutes).
+	stateMaxAge = 10 * 60
 )
 
 // GoogleAuth handles Google OAuth 2.0 authentication.
@@ -88,13 +99,22 @@ func (g *GoogleAuth) GetRedirectURL(r *http.Request) string {
 }
 
 // LoginURL returns the Google OAuth login URL with a random state.
-func (g *GoogleAuth) LoginURL(r *http.Request) string {
-	return g.LoginURLWithState(r, uuid.New().String())
+// Sets a state cookie on w for CSRF validation in the callback.
+func (g *GoogleAuth) LoginURL(w http.ResponseWriter, r *http.Request) string {
+	state := uuid.New().String()
+	g.setStateCookie(w, r, state)
+	return g.loginURL(r, state)
 }
 
 // LoginURLWithState returns the Google OAuth login URL with a specific state.
 // Used by CLI login to pass a state that links back to the pending login.
+// CLI states (prefixed "cli:") are validated via CLILoginStore, not cookies.
 func (g *GoogleAuth) LoginURLWithState(r *http.Request, state string) string {
+	return g.loginURL(r, state)
+}
+
+// loginURL builds the Google OAuth authorization URL.
+func (g *GoogleAuth) loginURL(r *http.Request, state string) string {
 	params := url.Values{}
 	params.Set("client_id", g.clientID)
 	params.Set("redirect_uri", g.GetRedirectURL(r))
@@ -104,6 +124,63 @@ func (g *GoogleAuth) LoginURLWithState(r *http.Request, state string) string {
 	params.Set("prompt", "consent")
 	params.Set("state", state)
 	return "https://accounts.google.com/o/oauth2/v2/auth?" + params.Encode()
+}
+
+// ValidateState checks the state parameter against the state cookie.
+// Returns nil if valid, error if not. Clears the cookie after validation.
+// CLI states (prefixed "cli:") are not validated here — they use CLILoginStore.
+func (g *GoogleAuth) ValidateState(w http.ResponseWriter, r *http.Request, state string) error {
+	// CLI login states are validated by CLILoginStore, not cookies
+	if strings.HasPrefix(state, "cli:") {
+		return nil
+	}
+
+	cookie, err := r.Cookie(stateCookieName)
+	if err != nil || cookie.Value == "" {
+		return fmt.Errorf("missing OAuth state cookie — possible CSRF or expired login")
+	}
+
+	// Clear the state cookie (single-use)
+	http.SetCookie(w, &http.Cookie{
+		Name: stateCookieName, Value: "", Path: "/",
+		MaxAge: -1, HttpOnly: true,
+	})
+
+	// Compare HMAC to prevent timing attacks
+	expected := g.stateMAC(cookie.Value)
+	actual := g.stateMAC(state)
+	if !hmac.Equal(expected, actual) {
+		return fmt.Errorf("OAuth state mismatch — possible CSRF")
+	}
+
+	return nil
+}
+
+// setStateCookie stores the OAuth state in a short-lived cookie for CSRF validation.
+func (g *GoogleAuth) setStateCookie(w http.ResponseWriter, r *http.Request, state string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     stateCookieName,
+		Value:    state,
+		Path:     "/",
+		MaxAge:   stateMaxAge,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https",
+	})
+}
+
+// stateMAC produces a MAC of the state value for constant-time comparison.
+func (g *GoogleAuth) stateMAC(state string) []byte {
+	mac := hmac.New(sha256.New, []byte(g.clientSecret))
+	mac.Write([]byte(state))
+	return mac.Sum(nil)
+}
+
+// generateStateToken creates a cryptographically random state token.
+func generateStateToken() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+	return hex.EncodeToString(b)
 }
 
 // LoginResult contains the result of a successful login.

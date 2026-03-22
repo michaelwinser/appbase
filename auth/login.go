@@ -55,7 +55,7 @@ func ServeLoginPage(w http.ResponseWriter, r *http.Request, appName string, goog
 		AuthEnabled: google != nil && google.IsConfigured(),
 	}
 	if data.AuthEnabled {
-		data.LoginURL = google.LoginURL(r)
+		data.LoginURL = google.LoginURL(w, r)
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	loginTemplate.Execute(w, data)
