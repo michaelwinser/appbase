@@ -34,7 +34,7 @@ func setupTestApp(t *testing.T) http.Handler {
 	}
 
 	// Register generated routes on the chi router
-	todoServer := &TodoServer{store: s}
+	todoServer := &TodoServer{Store: s}
 	api.HandlerFromMux(todoServer, a.Server().Router())
 
 	testSessions = a.Sessions()

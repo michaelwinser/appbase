@@ -13,6 +13,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.37
 	github.com/oapi-codegen/runtime v1.3.0
 	github.com/spf13/cobra v1.10.2
+	github.com/wailsapp/wails/v2 v2.11.0
 	github.com/zalando/go-keyring v0.2.7
 	google.golang.org/api v0.256.0
 	google.golang.org/grpc v1.76.0
@@ -66,7 +67,6 @@ require (
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/wailsapp/go-webview2 v1.0.22 // indirect
 	github.com/wailsapp/mimetype v1.4.1 // indirect
-	github.com/wailsapp/wails/v2 v2.11.0 // indirect
 	github.com/woodsbury/decimal128 v1.3.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.61.0 // indirect

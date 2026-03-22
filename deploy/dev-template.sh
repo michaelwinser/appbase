@@ -22,20 +22,27 @@ dev_build() {
         all)
             echo "Building server..."
             go build -o "$APP_BINARY_NAME" .
-            if [ -f desktop.go ]; then
+            if [ -d cmd/desktop ]; then
                 echo "Building desktop..."
-                go build -tags desktop -o "${APP_BINARY_NAME}-desktop" .
+                dev_build desktop
             fi
             ;;
         server)
             go build -o "$APP_BINARY_NAME" .
             ;;
         desktop)
-            if [ ! -f desktop.go ]; then
-                echo "No desktop.go found. See examples/todo-api/DESKTOP.md."
+            if [ -d cmd/desktop ]; then
+                # Copy latest frontend dist and ensure dirs exist
+                mkdir -p cmd/desktop/dist cmd/desktop/frontend
+                if [ -d frontend/dist ]; then
+                    cp -r frontend/dist/* cmd/desktop/dist/ 2>/dev/null || true
+                fi
+                export PATH="$PATH:$(go env GOPATH)/bin"
+                (cd cmd/desktop && wails build)
+            else
+                echo "No cmd/desktop/ directory found. See examples/todo-api/DESKTOP.md."
                 return 1
             fi
-            go build -tags desktop -o "${APP_BINARY_NAME}-desktop" .
             ;;
         *)
             echo "Usage: ./dev build [all|server|desktop]"

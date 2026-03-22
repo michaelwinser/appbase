@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"encoding/json"
@@ -15,7 +15,7 @@ var _ api.ServerInterface = (*TodoServer)(nil)
 
 // TodoServer implements the generated ServerInterface.
 type TodoServer struct {
-	store *TodoStore
+	Store *TodoStore
 }
 
 func (s *TodoServer) ListTodos(w http.ResponseWriter, r *http.Request) {
@@ -23,12 +23,11 @@ func (s *TodoServer) ListTodos(w http.ResponseWriter, r *http.Request) {
 	if userID == "" {
 		userID = "anonymous"
 	}
-	items, err := s.store.List(userID)
+	items, err := s.Store.List(userID)
 	if err != nil {
 		server.RespondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	// Convert store entities to API types
 	todos := make([]api.Todo, len(items))
 	for i, t := range items {
 		ca, _ := time.Parse(time.RFC3339, t.CreatedAt)
@@ -53,7 +52,7 @@ func (s *TodoServer) CreateTodo(w http.ResponseWriter, r *http.Request) {
 		server.RespondError(w, http.StatusBadRequest, "title is required")
 		return
 	}
-	todo, err := s.store.Create(userID, req.Title)
+	todo, err := s.Store.Create(userID, req.Title)
 	if err != nil {
 		server.RespondError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -69,11 +68,11 @@ func (s *TodoServer) CreateTodo(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *TodoServer) DeleteTodo(w http.ResponseWriter, r *http.Request, id string) {
-	if err := s.store.Delete(id); err != nil {
+	if err := s.Store.Delete(id); err != nil {
 		server.RespondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	server.RespondJSON(w, http.StatusOK, api.OkResponse{Ok: ptr("true")})
+	server.RespondJSON(w, http.StatusOK, api.OkResponse{Ok: Ptr("true")})
 }
 
-func ptr(s string) *string { return &s }
+func Ptr(s string) *string { return &s }

@@ -1,13 +1,12 @@
-//go:build desktop
-
-// Desktop mode — builds the app as a Wails native window.
+// Desktop wrapper for the todo-api app using Wails.
 //
 // Build:
 //
-//	go build -tags desktop -o TodoApp .
+//	cd examples/todo-api/cmd/desktop && wails build
 //
-// The same store, server, and frontend are used — Wails just wraps
-// them as a native window instead of an HTTP server.
+// Or via ./dev:
+//
+//	./dev build desktop
 package main
 
 import (
@@ -22,36 +21,34 @@ import (
 	"github.com/michaelwinser/appbase"
 	appcli "github.com/michaelwinser/appbase/cli"
 	"github.com/michaelwinser/appbase/examples/todo-api/api"
+	todoapp "github.com/michaelwinser/appbase/examples/todo-api/internal/app"
 	"github.com/michaelwinser/appbase/server"
-	"github.com/michaelwinser/appbase/store"
 )
 
-//go:embed frontend/dist/*
-var desktopAssets embed.FS
+//go:embed all:dist
+var assets embed.FS
+
+// App struct for Wails binding (minimal)
+type App struct{}
 
 func main() {
-	// Set up local mode: ~/.config/todo-api/app.db, no auth
 	appcli.SetupLocalMode("todo-api")
 
-	// Initialize app
 	app, err := appbase.New(appbase.Config{Name: "todo-api", Quiet: true})
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer app.Close()
 
-	// Create store — uses ~/.config/todo-api/app.db by default
-	coll, err := store.NewCollection[TodoEntity](app.DB(), "todos")
+	todoStore, err := todoapp.NewTodoStore(app.DB())
 	if err != nil {
 		log.Fatal(err)
 	}
-	todoStore := &TodoStore{coll: coll}
 
-	// Register generated API routes
-	todoServer := &TodoServer{store: todoStore}
+	todoServer := &todoapp.TodoServer{Store: todoStore}
 	api.HandlerFromMux(todoServer, app.Server().Router())
 
-	// Auth status — always logged in for desktop mode
+	// Always logged in for desktop mode
 	app.Server().Router().Get("/api/auth/status", func(w http.ResponseWriter, r *http.Request) {
 		server.RespondJSON(w, http.StatusOK, map[string]interface{}{
 			"loggedIn": true,
@@ -59,15 +56,16 @@ func main() {
 		})
 	})
 
-	// Launch Wails window
+	wailsApp := &App{}
 	err = wails.Run(&options.App{
 		Title:  "Todo",
 		Width:  800,
 		Height: 600,
 		AssetServer: &assetserver.Options{
-			Assets:  desktopAssets,
+			Assets:  assets,
 			Handler: app.Handler(),
 		},
+		Bind: []interface{}{wailsApp},
 	})
 	if err != nil {
 		log.Fatal(err)

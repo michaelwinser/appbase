@@ -1,0 +1,11 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "todo-api",
+  "outputfilename": "TodoApp",
+  "frontend:install": "",
+  "frontend:build": "",
+  "wailsjsdir": "./dist",
+  "author": {
+    "name": "appbase"
+  }
+}

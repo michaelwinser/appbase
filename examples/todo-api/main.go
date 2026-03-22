@@ -1,5 +1,3 @@
-//go:build !desktop
-
 // Example todo app demonstrating API-first development with OpenAPI codegen.
 //
 // Compare with:
@@ -56,7 +54,7 @@ func setup() error {
 	}
 
 	// Register routes for auto-serve (CLI commands without --server)
-	todoServer := &TodoServer{store: todoStore}
+	todoServer := &TodoServer{Store: todoStore}
 	api.HandlerFromMux(todoServer, app.Server().Router())
 	appcli.AutoServeHandler = app.Server().Router()
 
