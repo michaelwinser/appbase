@@ -20,14 +20,14 @@ dev_build() {
     target="${1:-all}"
     case "$target" in
         all)
-            echo "Building CLI..."
+            echo "Building server..."
             go build -o "$APP_BINARY_NAME" .
             if [ -f desktop.go ]; then
                 echo "Building desktop..."
                 go build -tags desktop -o "${APP_BINARY_NAME}-desktop" .
             fi
             ;;
-        cli)
+        server)
             go build -o "$APP_BINARY_NAME" .
             ;;
         desktop)
@@ -38,7 +38,7 @@ dev_build() {
             go build -tags desktop -o "${APP_BINARY_NAME}-desktop" .
             ;;
         *)
-            echo "Usage: ./dev build [all|cli|desktop]"
+            echo "Usage: ./dev build [all|server|desktop]"
             return 1
             ;;
     esac
@@ -110,7 +110,7 @@ $(basename "$(pwd)") — Project Commands
 Usage: ./dev <command> [options]
 
 Development:
-  build [target]     Build all (or: cli, desktop)
+  build [target]     Build all (or: server, desktop)
   test               Run Go tests
   e2e                Run E2E smoke tests
   serve              Start the web server
