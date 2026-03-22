@@ -58,7 +58,7 @@ func (d *DB) Close() error {
 }
 
 // Exec executes a SQL query without returning rows.
-// Panics if called on a Firestore backend.
+// Returns an error if called on a Firestore backend.
 func (d *DB) Exec(query string, args ...interface{}) (sql.Result, error) {
 	if d.sql == nil {
 		return nil, fmt.Errorf("Exec not supported on %s backend", d.storeType)
@@ -67,7 +67,7 @@ func (d *DB) Exec(query string, args ...interface{}) (sql.Result, error) {
 }
 
 // Query executes a SQL query that returns rows.
-// Panics if called on a Firestore backend.
+// Returns an error if called on a Firestore backend.
 func (d *DB) Query(query string, args ...interface{}) (*sql.Rows, error) {
 	if d.sql == nil {
 		return nil, fmt.Errorf("Query not supported on %s backend", d.storeType)
@@ -76,10 +76,10 @@ func (d *DB) Query(query string, args ...interface{}) (*sql.Rows, error) {
 }
 
 // QueryRow executes a SQL query that returns at most one row.
-// Returns nil if called on a Firestore backend.
+// Panics if called on a Firestore backend — use IsSQL() to check first.
 func (d *DB) QueryRow(query string, args ...interface{}) *sql.Row {
 	if d.sql == nil {
-		return nil
+		panic(fmt.Sprintf("QueryRow not supported on %s backend — use IsSQL() to check before calling", d.storeType))
 	}
 	return d.sql.QueryRow(query, args...)
 }
