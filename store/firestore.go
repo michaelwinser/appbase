@@ -126,22 +126,113 @@ func matchesWheres[T any](meta *structMeta, entity *T, wheres []whereClause) boo
 		if fi == nil {
 			return false
 		}
-		fieldVal := fmt.Sprintf("%v", v.Field(fi.FieldIdx).Interface())
-		wantVal := fmt.Sprintf("%v", w.Value)
+		fieldVal := v.Field(fi.FieldIdx)
 
 		switch w.Op {
 		case "==":
-			if fieldVal != wantVal {
+			if compareValues(fieldVal, w.Value) != 0 {
 				return false
 			}
 		case "!=":
-			if fieldVal == wantVal {
+			if compareValues(fieldVal, w.Value) == 0 {
+				return false
+			}
+		case "<":
+			if compareValues(fieldVal, w.Value) >= 0 {
+				return false
+			}
+		case "<=":
+			if compareValues(fieldVal, w.Value) > 0 {
+				return false
+			}
+		case ">":
+			if compareValues(fieldVal, w.Value) <= 0 {
+				return false
+			}
+		case ">=":
+			if compareValues(fieldVal, w.Value) < 0 {
 				return false
 			}
 		}
-		// For <, >, <=, >= on strings, lexicographic comparison works for RFC3339 dates
 	}
 	return true
+}
+
+// compareValues compares a reflect.Value against an interface{} value.
+// Returns -1, 0, or 1 like strings.Compare.
+// Falls back to string comparison for unsupported types.
+func compareValues(fieldVal reflect.Value, want interface{}) int {
+	switch fieldVal.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		a := fieldVal.Int()
+		var b int64
+		switch v := want.(type) {
+		case int:
+			b = int64(v)
+		case int64:
+			b = v
+		case float64:
+			b = int64(v)
+		default:
+			// Fall through to string comparison
+			goto stringCompare
+		}
+		if a < b {
+			return -1
+		} else if a > b {
+			return 1
+		}
+		return 0
+
+	case reflect.Float32, reflect.Float64:
+		a := fieldVal.Float()
+		var b float64
+		switch v := want.(type) {
+		case float64:
+			b = v
+		case float32:
+			b = float64(v)
+		case int:
+			b = float64(v)
+		case int64:
+			b = float64(v)
+		default:
+			goto stringCompare
+		}
+		if a < b {
+			return -1
+		} else if a > b {
+			return 1
+		}
+		return 0
+
+	case reflect.Bool:
+		a := fieldVal.Bool()
+		var b bool
+		switch v := want.(type) {
+		case bool:
+			b = v
+		default:
+			goto stringCompare
+		}
+		if a == b {
+			return 0
+		}
+		if !a && b {
+			return -1
+		}
+		return 1
+	}
+
+stringCompare:
+	a := fmt.Sprintf("%v", fieldVal.Interface())
+	b := fmt.Sprintf("%v", want)
+	if a < b {
+		return -1
+	} else if a > b {
+		return 1
+	}
+	return 0
 }
 
 // sortResults sorts a slice of T by a field.
