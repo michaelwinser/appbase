@@ -53,8 +53,15 @@ func (b *sqlSessionBackend) Get(id string) (*Session, error) {
 	if err != nil {
 		return nil, fmt.Errorf("getting session: %w", err)
 	}
-	session.ExpiresAt, _ = time.Parse(time.RFC3339, expiresAt)
-	session.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
+	var parseErr error
+	session.ExpiresAt, parseErr = time.Parse(time.RFC3339, expiresAt)
+	if parseErr != nil {
+		return nil, fmt.Errorf("parsing session expiry %q: %w", expiresAt, parseErr)
+	}
+	session.CreatedAt, parseErr = time.Parse(time.RFC3339, createdAt)
+	if parseErr != nil {
+		return nil, fmt.Errorf("parsing session created_at %q: %w", createdAt, parseErr)
+	}
 	return &session, nil
 }
 
