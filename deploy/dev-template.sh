@@ -41,6 +41,16 @@ dev_serve() {
     go run . serve
 }
 
+dev_desktop() {
+    if [ ! -f desktop.go ]; then
+        echo "No desktop.go found. See examples/todo-api/DESKTOP.md."
+        return 1
+    fi
+    echo "Building desktop app..."
+    go build -tags desktop -o "${APP_BINARY_NAME}App" .
+    echo "Built ${APP_BINARY_NAME}App"
+}
+
 dev_ci() {
     appbase lint-api 2>/dev/null || true
     go vet ./...
@@ -63,6 +73,7 @@ _load_secrets() {
 dev_dispatch() {
     case "${1:-help}" in
         build)      dev_build ;;
+        desktop)    dev_desktop ;;
         test)       dev_test ;;
         e2e)        dev_e2e ;;
         serve)      dev_serve ;;
@@ -87,6 +98,7 @@ Usage: ./dev <command> [options]
 
 Development:
   build              Build the binary
+  desktop            Build native desktop app (Wails)
   test               Run Go tests
   e2e                Run E2E smoke tests
   serve              Start the web server
