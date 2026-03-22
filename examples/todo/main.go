@@ -26,21 +26,9 @@ import (
 	"github.com/michaelwinser/appbase/server"
 )
 
-// Schema for the todo app's domain tables.
-const schema = `
-CREATE TABLE IF NOT EXISTS todos (
-	id TEXT PRIMARY KEY,
-	user_id TEXT NOT NULL,
-	title TEXT NOT NULL,
-	done INTEGER NOT NULL DEFAULT 0,
-	created_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_todos_user ON todos(user_id);
-`
-
 var (
 	app   *appbase.App
-	store *TodoStore
+	todos *TodoStore
 )
 
 func setup() error {
@@ -49,10 +37,10 @@ func setup() error {
 	if err != nil {
 		return err
 	}
-	if err := app.Migrate(schema); err != nil {
+	todos, err = NewTodoStore(app.DB())
+	if err != nil {
 		return err
 	}
-	store = NewTodoStore(app.DB())
 	return nil
 }
 
@@ -91,7 +79,7 @@ func main() {
 		if len(args) == 0 {
 			return fmt.Errorf("title is required: todo add \"Buy groceries\"")
 		}
-		todo, err := store.Create("cli-user", args[0])
+		todo, err := todos.Create("cli-user", args[0])
 		if err != nil {
 			return err
 		}
@@ -102,15 +90,15 @@ func main() {
 
 	// CLI: list todos
 	listCmd := cli.Command("list", "List all todos", func(cmd *cobra.Command, args []string) error {
-		todos, err := store.List("cli-user")
+		items, err := todos.List("cli-user")
 		if err != nil {
 			return err
 		}
-		if len(todos) == 0 {
+		if len(items) == 0 {
 			fmt.Println("No todos yet. Add one with: todo add \"Buy groceries\"")
 			return nil
 		}
-		for _, t := range todos {
+		for _, t := range items {
 			status := "[ ]"
 			if t.Done {
 				status = "[x]"
@@ -129,12 +117,12 @@ func listHandler(w http.ResponseWriter, r *http.Request) {
 	if userID == "" {
 		userID = "anonymous"
 	}
-	todos, err := store.List(userID)
+	items, err := todos.List(userID)
 	if err != nil {
 		server.RespondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	server.RespondJSON(w, http.StatusOK, todos)
+	server.RespondJSON(w, http.StatusOK, items)
 }
 
 func createHandler(w http.ResponseWriter, r *http.Request) {
@@ -149,7 +137,7 @@ func createHandler(w http.ResponseWriter, r *http.Request) {
 		server.RespondError(w, http.StatusBadRequest, "title is required")
 		return
 	}
-	todo, err := store.Create(userID, req.Title)
+	todo, err := todos.Create(userID, req.Title)
 	if err != nil {
 		server.RespondError(w, http.StatusInternalServerError, err.Error())
 		return

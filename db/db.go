@@ -111,6 +111,12 @@ func New() (*DB, error) {
 	}
 }
 
+// NewFromSQL creates a DB wrapping an existing *sql.DB connection.
+// Useful for testing with in-memory databases.
+func NewFromSQL(sqlDB *sql.DB) *DB {
+	return &DB{sql: sqlDB, storeType: "sqlite"}
+}
+
 // Migrate runs SQL migration statements against the database.
 // For SQL backends, uses CREATE TABLE IF NOT EXISTS pattern — safe to run repeatedly.
 // For Firestore, this is a no-op (Firestore is schemaless).
