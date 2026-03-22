@@ -89,6 +89,42 @@ func (c *CLI) addBuiltinCommands() {
 			fmt.Printf("%s (built with appbase)\n", c.root.Use)
 		},
 	})
+
+	// Persistent --server flag for CLI commands that talk to the server
+	c.root.PersistentFlags().String("server", "", "Server URL (default: from keychain or http://localhost:3000)")
+
+	appName := c.root.Use
+
+	// login — authenticate via browser
+	c.root.AddCommand(&cobra.Command{
+		Use:   "login",
+		Short: "Log in via browser (Google OAuth)",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			serverFlag, _ := cmd.Flags().GetString("server")
+			serverURL := ResolveServerURL(serverFlag, appName)
+			return LoginBrowser(serverURL, appName)
+		},
+	})
+
+	// logout — clear session
+	c.root.AddCommand(&cobra.Command{
+		Use:   "logout",
+		Short: "Log out and clear saved session",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return Logout(appName)
+		},
+	})
+
+	// whoami — show current user
+	c.root.AddCommand(&cobra.Command{
+		Use:   "whoami",
+		Short: "Show the current logged-in user",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			serverFlag, _ := cmd.Flags().GetString("server")
+			serverURL := ResolveServerURL(serverFlag, appName)
+			return Whoami(serverURL, appName)
+		},
+	})
 }
 
 // runTests executes `go test ./...` or a specific package.

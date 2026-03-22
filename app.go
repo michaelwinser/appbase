@@ -7,6 +7,7 @@ package appbase
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/michaelwinser/appbase/auth"
 	"github.com/michaelwinser/appbase/db"
@@ -15,11 +16,12 @@ import (
 
 // App is the central coordinator that manages connections and services.
 type App struct {
-	db       *db.DB
-	sessions *auth.SessionStore
-	google   *auth.GoogleAuth
-	server   *server.Server
-	name     string
+	db        *db.DB
+	sessions  *auth.SessionStore
+	google    *auth.GoogleAuth
+	server    *server.Server
+	cliLogins *auth.CLILoginStore
+	name      string
 }
 
 // Config configures an appbase application.
@@ -76,11 +78,12 @@ func New(config Config) (*App, error) {
 	}
 
 	app := &App{
-		db:       database,
-		sessions: sessions,
-		google:   google,
-		server:   srv,
-		name:     name,
+		db:        database,
+		sessions:  sessions,
+		google:    google,
+		server:    srv,
+		cliLogins: auth.NewCLILoginStore(),
+		name:      name,
 	}
 
 	// Register auth routes
@@ -167,7 +170,8 @@ func (a *App) registerAuthRoutes() {
 		})
 	})
 
-	// OAuth callback
+	// OAuth callback — handles both browser and CLI login flows.
+	// CLI logins use a state prefixed with "cli:" to identify the pending login.
 	r.Get("/api/auth/callback", func(w http.ResponseWriter, r *http.Request) {
 		if a.google == nil {
 			server.RespondError(w, http.StatusServiceUnavailable, "Google auth not configured")
@@ -185,8 +189,63 @@ func (a *App) registerAuthRoutes() {
 			return
 		}
 
+		// Check if this is a CLI login (state starts with "cli:")
+		state := r.URL.Query().Get("state")
+		if strings.HasPrefix(state, "cli:") {
+			a.cliLogins.Complete(state, result.Session.ID)
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Write([]byte(`<!DOCTYPE html>
+<html><head><title>Login Successful</title></head>
+<body style="font-family:system-ui;text-align:center;padding:3rem">
+<h1>Login successful</h1>
+<p>You can close this tab and return to your terminal.</p>
+</body></html>`))
+			return
+		}
+
 		a.google.SetSessionCookie(w, r, result.Session.ID)
 		http.Redirect(w, r, "/", http.StatusFound)
+	})
+
+	// CLI login — initiate a CLI login flow.
+	// Returns a login URL and polling token.
+	r.Post("/api/auth/cli-login", func(w http.ResponseWriter, r *http.Request) {
+		if a.google == nil || !a.google.IsConfigured() {
+			server.RespondError(w, http.StatusServiceUnavailable, "Google auth not configured")
+			return
+		}
+		token, state := a.cliLogins.Create()
+		loginURL := a.google.LoginURLWithState(r, state)
+		server.RespondJSON(w, http.StatusOK, map[string]string{
+			"loginURL": loginURL,
+			"token":    token,
+		})
+	})
+
+	// CLI poll — check if a CLI login has completed.
+	r.Get("/api/auth/cli-poll", func(w http.ResponseWriter, r *http.Request) {
+		token := r.URL.Query().Get("token")
+		if token == "" {
+			server.RespondError(w, http.StatusBadRequest, "missing token parameter")
+			return
+		}
+		sessionID := a.cliLogins.Poll(token)
+		if sessionID == "" {
+			server.RespondJSON(w, http.StatusOK, map[string]interface{}{
+				"completed": false,
+			})
+			return
+		}
+		session, err := a.sessions.Get(sessionID)
+		if err != nil || session == nil {
+			server.RespondError(w, http.StatusInternalServerError, "session not found")
+			return
+		}
+		server.RespondJSON(w, http.StatusOK, map[string]interface{}{
+			"completed": true,
+			"sessionID": sessionID,
+			"email":     session.Email,
+		})
 	})
 
 	// Logout

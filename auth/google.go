@@ -87,9 +87,14 @@ func (g *GoogleAuth) GetRedirectURL(r *http.Request) string {
 	return fmt.Sprintf("%s://%s/api/auth/callback", scheme, r.Host)
 }
 
-// LoginURL returns the Google OAuth login URL.
+// LoginURL returns the Google OAuth login URL with a random state.
 func (g *GoogleAuth) LoginURL(r *http.Request) string {
-	state := uuid.New().String()
+	return g.LoginURLWithState(r, uuid.New().String())
+}
+
+// LoginURLWithState returns the Google OAuth login URL with a specific state.
+// Used by CLI login to pass a state that links back to the pending login.
+func (g *GoogleAuth) LoginURLWithState(r *http.Request, state string) string {
 	params := url.Values{}
 	params.Set("client_id", g.clientID)
 	params.Set("redirect_uri", g.GetRedirectURL(r))
