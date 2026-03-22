@@ -1,0 +1,29 @@
+auth/session_test.go
+  78f73468b094b081 12
+auth/middleware_test.go
+  78f73468b094b081 1-191
+server/server_test.go
+  78f73468b094b081 1-157
+config/secrets_test.go
+  78f73468b094b081 1-166
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "1a3e1692c6de023b3f11612bbc3776d76334296e",
+  "prompts": {
+    "78f73468b094b081": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1faa2564-fcd5-4053-9d23-44be329f5aa2",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 515,
+      "total_deletions": 6,
+      "accepted_lines": 515,
+      "overriden_lines": 0
+    }
+  }
+}
