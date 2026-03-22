@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"log"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 func newSQLiteWithPath(dbPath string) (*DB, error) {
-	sqlDB, err := sql.Open("sqlite3", dbPath+"?_foreign_keys=on")
+	sqlDB, err := sql.Open("sqlite", dbPath+"?_foreign_keys=on")
 	if err != nil {
 		return nil, fmt.Errorf("opening sqlite database: %w", err)
 	}

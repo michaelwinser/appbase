@@ -1,3 +1,5 @@
+//go:build desktop
+
 // Desktop wrapper for the todo-api app using Wails.
 //
 // Build:

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	appdb "github.com/michaelwinser/appbase/db"
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 type testItem struct {
@@ -18,7 +18,7 @@ type testItem struct {
 
 func testDB(t *testing.T) *appdb.DB {
 	t.Helper()
-	sqlDB, err := sql.Open("sqlite3", ":memory:?_foreign_keys=on")
+	sqlDB, err := sql.Open("sqlite", ":memory:?_foreign_keys=on")
 	if err != nil {
 		t.Fatal(err)
 	}
