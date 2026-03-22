@@ -33,10 +33,12 @@ The `scaffold-app` skill creates this file. For existing apps, create it manuall
 
 | Runtime | Store | How |
 |---------|-------|-----|
-| Local (host) | SQLite | `go run . serve` |
+| Local CLI | SQLite | `./myapp list` — auto-serve, no setup needed |
+| Local web server | SQLite | `go run . serve` |
+| Local desktop (Wails) | SQLite | Native window via `app.Handler()` |
 | Local Docker | SQLite | `./tc docker up` |
 | TrueNAS Docker | SQLite | Copy `deploy/docker-compose.yml`, mount volume |
-| Cloud Run | Firestore | `./tc deploy` |
+| Cloud Run | Firestore | `appbase deploy` |
 
 ## Provisioning GCP (Full Lifecycle)
 

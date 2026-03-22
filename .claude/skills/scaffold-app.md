@@ -251,18 +251,20 @@ go run . list     # Test the CLI
 
 | Pattern | When to use | Example |
 |---------|------------|---------|
-| **API-first (recommended)** | Apps with a web UI, CLI client, or external consumers | `examples/todo-api/` |
+| **API-first (recommended)** | Apps with a web UI, CLI client, or external consumers | `examples/todo-api/` (Svelte frontend) |
 | **Hand-written routes** | Simple apps, internal tools, prototypes | `examples/todo-store/` |
+| **Desktop (Wails)** | Native desktop app, same API | See `examples/todo-api/DESKTOP.md` |
 
-For API-first apps, see the `api-first` skill for the full workflow. The key difference: define endpoints in `openapi.yaml` first, then generate server + client code.
+For API-first apps, see the `api-first` skill for the full workflow.
 
 ## Key Patterns
 
-- **Login page is built-in** — use `app.LoginPage(handler)` on your root route. Shows Google sign-in when unauthenticated, your content when authenticated.
-- **Auth is automatic** — appbase middleware handles sessions. Use `appbase.UserID(r)` in handlers.
-- **CLI uses the API** — CLI commands should use the generated HTTP client (not direct store access). This ensures the CLI tests the same code path as the web UI. Use `appcli.AuthenticatedClient()` for auth.
-- **Secrets in the keychain, not on disk** — `./tc secret set/import` stores in OS keychain. `./tc serve` and `./tc deploy` read from keychain automatically. `.env` is a fallback for CI only. See `docs/secrets.md`.
-- **Schema is yours** — appbase manages sessions table; you manage everything else via `store.Collection`.
-- **Project identity in app.json** — deploy scripts read name and GCP project from here.
-- **Provisioning is one command** — `./tc provision email@example.com` sets up GCP end-to-end.
-- **Lint the API pattern** — `./tc lint-api` verifies codegen is up to date and no hand-written routes.
+- **Three runtime modes** — local CLI (`myapp list` — auto-serve, no login), web server (`myapp serve`), remote CLI (`myapp list --server https://...`). Apps work in all three without changes.
+- **Auto-serve CLI** — CLI commands auto-start an ephemeral server if no `--server` flag. No `serve &` needed.
+- **Login page is built-in** — `app.LoginPage(handler)` shows Google sign-in when unauthenticated. Skipped in local mode.
+- **CLI uses the API** — CLI commands use the generated HTTP client (not direct store access). `appcli.ResolveServerWithAutoServe()` handles server resolution.
+- **Desktop via app.Handler()** — use `app.Handler()` with Wails for native desktop apps. Same API, same store, no ports.
+- **Secrets in the keychain, not on disk** — `appbase secret set/import` stores in OS keychain. See `docs/secrets.md`.
+- **Schema is yours** — appbase manages sessions; you manage everything else via `store.Collection`.
+- **Provisioning is one command** — `appbase provision email@example.com` sets up GCP end-to-end.
+- **Lint the API pattern** — `appbase lint-api` verifies codegen is up to date.

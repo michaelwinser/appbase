@@ -59,7 +59,9 @@ appbase/
 ├── config/                # Configuration
 │   └── config.go          # Layered config: env vars → defaults (future: files, secrets)
 ├── cli/                   # CLI base
-│   └── cli.go             # Cobra root command, serve/version, app command helper
+│   ├── cli.go             # Cobra root command, serve/version, login/logout/whoami
+│   ├── auth.go            # Browser OAuth login, authenticated HTTP client
+│   └── autoserve.go       # Auto-start ephemeral server for CLI commands
 ├── .devcontainer/         # Development containers
 │   ├── devcontainer.json  # VS Code / Codespaces config
 │   ├── docker-compose.yml # workspace (Go) + frontend (Node) services
@@ -74,12 +76,12 @@ appbase/
 │   ├── Dockerfile         # Multi-stage build template
 │   ├── docker-compose.yml # Runtime compose template
 │   └── deploy_test.sh     # Tests for config/URL functions
-├── cmd/secret/            # Secret management CLI
-│   └── main.go
+├── cmd/appbase/           # Installable CLI (go install ...cmd/appbase@latest)
+├── cmd/secret/            # Legacy secret CLI (use cmd/appbase instead)
 ├── examples/              # Example apps (progression of patterns)
 │   ├── todo/              # Raw db connections, hand-written routes
 │   ├── todo-store/        # store.Collection, hand-written routes
-│   ├── todo-api/          # OpenAPI spec, generated server + client, CLI auth
+│   ├── todo-api/          # Full stack: OpenAPI, Svelte frontend, CLI auth, auto-serve
 │   └── bookmarks/         # store.Collection, richer entity
 ├── app.json               # Project identity (name, gcpProject, region, urls)
 ├── Dockerfile             # Cloud Run build (builds todo example)
@@ -148,13 +150,19 @@ func myHandler(w http.ResponseWriter, r *http.Request) {
 CLI commands use the generated HTTP client, not direct store access:
 
 ```go
-// Built-in commands (automatic): login, logout, whoami, --server flag
+// Built-in: login, logout, whoami, --server flag, auto-serve
 // Your commands use the generated client:
+serverURL, cleanup, _ := appcli.ResolveServerWithAutoServe(cmd, "myapp")
+defer cleanup()
 client, _ := api.NewClientWithResponses(serverURL, api.WithHTTPClient(httpClient))
-resp, _ := client.ListThingsWithResponse(ctx)
 ```
 
-CLI auth: `myapp login --server https://my-app.run.app` opens the browser for Google OAuth, stores the session in the OS keychain. See `cli/auth.go`.
+**Three runtime modes (automatic):**
+- `myapp list` — local mode: auto-starts ephemeral server, no login needed
+- `myapp serve` — web server: persistent HTTP server with full OAuth
+- `myapp list --server https://prod.app` — remote: uses keychain session
+
+See `cli/auth.go` and `cli/autoserve.go`. Desktop mode via `app.Handler()` with Wails (see `examples/todo-api/DESKTOP.md`).
 
 ### 5. OpenAPI codegen
 

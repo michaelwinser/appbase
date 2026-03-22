@@ -90,15 +90,13 @@ Ports declared in `app.yaml` instead of external portmanager.
 - Docker compose reads port from `app.yaml`
 - Portmanager becomes optional / deprecated
 
-## Next: App Runtime and Desktop
+### 9. Auto-Serve CLI — COMPLETED
 
-### 9. Auto-Serve CLI
-
-CLI commands that talk to the API currently require a running server:
-```sh
-./travel serve &
-./travel add "Trip" --server http://localhost:3000
-```
+CLI commands auto-start an ephemeral server when no `--server` flag is set.
+Local mode also enables dev auth (no login needed). Three modes:
+- `./myapp list` — local: auto-serve + dev auth
+- `./myapp serve` — web server: full OAuth
+- `./myapp list --server https://prod` — remote: keychain session
 
 With auto-serve, the CLI detects no `--server` flag, silently starts an ephemeral
 server on a random port, runs the command, and tears down:

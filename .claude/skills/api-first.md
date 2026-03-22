@@ -69,15 +69,27 @@ listCmd := &cobra.Command{
     Use:   "list",
     Short: "List things (via API)",
     RunE: func(cmd *cobra.Command, args []string) error {
-        serverURL := appcli.ResolveServerURL(serverFlag, appName)
-        httpClient, _ := appcli.AuthenticatedClient(appName)
-        client, _ := api.NewClientWithResponses(serverURL, api.WithHTTPClient(httpClient))
+        // Auto-serve: starts ephemeral server if no --server flag
+        serverURL, cleanup, _ := appcli.ResolveServerWithAutoServe(cmd, appName)
+        defer cleanup()
 
+        // Local mode: falls back to plain client (dev auth handles it)
+        httpClient, err := appcli.AuthenticatedClient(appName)
+        if err != nil {
+            httpClient = http.DefaultClient
+        }
+
+        client, _ := api.NewClientWithResponses(serverURL, api.WithHTTPClient(httpClient))
         resp, err := client.ListThingsWithResponse(ctx)
         // ...
     },
 }
 ```
+
+**Three modes — no code changes needed:**
+- `myapp list` — local: auto-serve + dev auth, no setup
+- `myapp list --server http://localhost:3000` — uses running server
+- `myapp list --server https://prod.app` — remote, needs `myapp login` first
 
 ### 6. Write a use case test
 
