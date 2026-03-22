@@ -199,9 +199,11 @@ func (b *sqlBackend[T]) scanCurrentRow(rows *sql.Rows) (*T, error) {
 		switch fi.GoType.Kind() {
 		case reflect.Bool:
 			targets[i] = new(int)
-		case reflect.Int, reflect.Int64:
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			targets[i] = new(int64)
-		case reflect.Float64:
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			targets[i] = new(int64)
+		case reflect.Float32, reflect.Float64:
 			targets[i] = new(float64)
 		default:
 			targets[i] = new(string)
@@ -220,9 +222,11 @@ func (b *sqlBackend[T]) scanCurrentRow(rows *sql.Rows) (*T, error) {
 		switch fi.GoType.Kind() {
 		case reflect.Bool:
 			field.SetBool(*targets[i].(*int) != 0)
-		case reflect.Int, reflect.Int64:
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			field.SetInt(*targets[i].(*int64))
-		case reflect.Float64:
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			field.SetUint(uint64(*targets[i].(*int64)))
+		case reflect.Float32, reflect.Float64:
 			field.SetFloat(*targets[i].(*float64))
 		default:
 			field.SetString(*targets[i].(*string))

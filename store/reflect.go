@@ -2,6 +2,7 @@ package store
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 	"strings"
 	"sync"
@@ -173,19 +174,36 @@ func setField(field reflect.Value, val interface{}) {
 		case float64:
 			field.SetBool(v != 0)
 		}
-	case reflect.Int, reflect.Int64:
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		switch v := val.(type) {
 		case int64:
 			field.SetInt(v)
+		case int:
+			field.SetInt(int64(v))
 		case float64:
 			field.SetInt(int64(v))
 		}
-	case reflect.Float64:
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		switch v := val.(type) {
+		case int64:
+			field.SetUint(uint64(v))
+		case uint64:
+			field.SetUint(v)
+		case float64:
+			field.SetUint(uint64(v))
+		}
+	case reflect.Float32, reflect.Float64:
 		switch v := val.(type) {
 		case float64:
 			field.SetFloat(v)
+		case float32:
+			field.SetFloat(float64(v))
 		case int64:
 			field.SetFloat(float64(v))
 		}
+	default:
+		// Unsupported type — log a warning. This covers struct types (like time.Time)
+		// that didn't match via direct assignability above.
+		log.Printf("store: cannot set field of type %s from %T value", field.Type(), val)
 	}
 }
