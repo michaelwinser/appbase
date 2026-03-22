@@ -1,0 +1,39 @@
+deploy/dev-template.sh
+  0e159da3e0bed3fb 1-104
+TESTING.md
+  0e159da3e0bed3fb 85,88,91
+.claude/skills/migrate-config.md
+  0e159da3e0bed3fb 19,89
+.claude/skills/deploy.md
+  0e159da3e0bed3fb 26,39,48,105
+.claude/skills/scaffold-app.md
+  0e159da3e0bed3fb 29,163,165-166,168-170,178-179,181-182,184,186-191,193-202,204-207,210,212-218,222-224,226-231
+.claude/skills/api-first.md
+  0e159da3e0bed3fb 40
+examples/todo-api/dev
+  0e159da3e0bed3fb 2-3,8-9,11-12,14-18
+deploy/deploy.sh
+  0e159da3e0bed3fb 4,21
+CLAUDE.md
+  0e159da3e0bed3fb 97,170-171
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "d7b0a9fd277b5da03489c3717fd16aa6493d760f",
+  "prompts": {
+    "0e159da3e0bed3fb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c070a507-3782-4b76-8b23-aa21d56393c4",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 247,
+      "total_deletions": 100,
+      "accepted_lines": 247,
+      "overriden_lines": 0
+    }
+  }
+}
