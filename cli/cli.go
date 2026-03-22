@@ -24,6 +24,11 @@ import (
 // Check this in your setupFn to set Config.Quiet for non-serve commands.
 var IsServeCommand bool
 
+// IsLocalMode is true when the CLI will use auto-serve (no --server, not serve command).
+// When true, AUTH_MODE is set to "dev" so the app runs in single-user mode
+// without requiring OAuth login. Check this in setupFn if you need to know.
+var IsLocalMode bool
+
 // AutoServeHandler is set by the app after setup to enable auto-serve.
 // When a CLI command runs without --server, the CLI starts an ephemeral
 // server using this handler, runs the command, and tears down.
@@ -178,6 +183,13 @@ func (c *CLI) Command(use, short string, runFn func(cmd *cobra.Command, args []s
 		Short:        short,
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			// Detect local mode: no --server flag means auto-serve will be used.
+			// Enable dev auth so no login is needed.
+			serverFlag, _ := cmd.Flags().GetString("server")
+			if serverFlag == "" && !IsServeCommand {
+				IsLocalMode = true
+				os.Setenv("AUTH_MODE", "dev")
+			}
 			if err := c.setupFn(); err != nil {
 				return err
 			}
