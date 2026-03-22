@@ -1,0 +1,52 @@
+deploy/dev-template.sh
+  0e159da3e0bed3fb 25,27,34-43
+examples/todo-api/internal/app/server.go
+  0e159da3e0bed3fb 1-78
+examples/todo-api/internal/app/store.go
+  0e159da3e0bed3fb 1-53
+examples/todo-api/main.go
+  0e159da3e0bed3fb 57
+examples/todo-api/cmd/desktop/main.go
+  0e159da3e0bed3fb 1-73
+examples/todo-api/store.go
+  0e159da3e0bed3fb 3,5,7-9,11
+examples/todo-api/cmd/desktop/build/darwin/Info.plist
+  0e159da3e0bed3fb 1-21
+examples/todo-api/usecases_test.go
+  0e159da3e0bed3fb 37
+examples/todo-api/cmd/desktop/wails.json
+  0e159da3e0bed3fb 1-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "efa53ee0847063eb996b0af066e62fab20f386f6",
+  "prompts": {
+    "0e159da3e0bed3fb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c070a507-3782-4b76-8b23-aa21d56393c4",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 269,
+      "total_deletions": 68,
+      "accepted_lines": 259,
+      "overriden_lines": 0
+    },
+    "a60b2c4d5f6cb007": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9483af96-511e-4f8d-bd6b-4a9c281bdd8d",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 403,
+      "total_deletions": 102,
+      "accepted_lines": 301,
+      "overriden_lines": 0
+    }
+  }
+}
