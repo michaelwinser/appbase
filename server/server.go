@@ -19,17 +19,29 @@ type Server struct {
 	port   string
 }
 
+// Config configures the HTTP server.
+type Config struct {
+	// AllowedOrigins for CORS. If empty, CORS headers are not set (same-origin only).
+	// Set to ["*"] to allow all origins (public APIs only — not recommended with auth).
+	AllowedOrigins []string
+}
+
 // New creates a new server with standard middleware (logger, recoverer, CORS, JSON content-type).
-func New() *Server {
+func New(configs ...Config) *Server {
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "3000"
 	}
 
+	var cfg Config
+	if len(configs) > 0 {
+		cfg = configs[0]
+	}
+
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	r.Use(apiMiddleware)
+	r.Use(corsMiddleware(cfg.AllowedOrigins))
 
 	return &Server{router: r, port: port}
 }
@@ -51,21 +63,42 @@ func (s *Server) Port() string {
 	return s.port
 }
 
-// apiMiddleware applies JSON content-type and CORS to API routes.
-func apiMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasPrefix(r.URL.Path, "/api/") || r.URL.Path == "/health" {
-			w.Header().Set("Content-Type", "application/json")
-			w.Header().Set("Access-Control-Allow-Origin", "*")
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-			if r.Method == "OPTIONS" {
-				w.WriteHeader(http.StatusOK)
-				return
-			}
+// corsMiddleware applies JSON content-type and CORS to API routes.
+// If allowedOrigins is empty, no CORS headers are set (same-origin only).
+func corsMiddleware(allowedOrigins []string) func(http.Handler) http.Handler {
+	originSet := make(map[string]bool, len(allowedOrigins))
+	allowAll := false
+	for _, o := range allowedOrigins {
+		if o == "*" {
+			allowAll = true
 		}
-		next.ServeHTTP(w, r)
-	})
+		originSet[o] = true
+	}
+
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, "/api/") || r.URL.Path == "/health" {
+				w.Header().Set("Content-Type", "application/json")
+
+				if len(allowedOrigins) > 0 {
+					origin := r.Header.Get("Origin")
+					if allowAll {
+						w.Header().Set("Access-Control-Allow-Origin", "*")
+					} else if originSet[origin] {
+						w.Header().Set("Access-Control-Allow-Origin", origin)
+						w.Header().Set("Vary", "Origin")
+					}
+					w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+					w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+					if r.Method == "OPTIONS" {
+						w.WriteHeader(http.StatusOK)
+						return
+					}
+				}
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 }
 
 // RespondJSON writes a JSON response.
