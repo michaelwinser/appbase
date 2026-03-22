@@ -46,9 +46,13 @@ func parseStruct[T any]() (*structMeta, error) {
 		}
 
 		parts := strings.Split(tag, ",")
+		colName := parts[0]
+		if !validIdentifier.MatchString(colName) {
+			return nil, fmt.Errorf("store: field %s has invalid column name %q (must be alphanumeric/underscore)", f.Name, colName)
+		}
 		fi := fieldInfo{
 			GoName:   f.Name,
-			Column:   parts[0],
+			Column:   colName,
 			GoType:   f.Type,
 			FieldIdx: i,
 		}

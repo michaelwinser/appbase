@@ -264,6 +264,38 @@ func TestFirst(t *testing.T) {
 	}
 }
 
+func TestWhereRejectsUnknownField(t *testing.T) {
+	coll := testCollection(t)
+	_, err := coll.Where("hacked; DROP TABLE items", "==", "x").All()
+	if err == nil {
+		t.Fatal("expected error for unknown field")
+	}
+}
+
+func TestWhereRejectsInvalidOperator(t *testing.T) {
+	coll := testCollection(t)
+	_, err := coll.Where("owner", "OR 1=1 --", "x").All()
+	if err == nil {
+		t.Fatal("expected error for invalid operator")
+	}
+}
+
+func TestOrderByRejectsUnknownField(t *testing.T) {
+	coll := testCollection(t)
+	_, err := coll.Where("owner", "==", "alice").OrderBy("nonexistent", Asc).All()
+	if err == nil {
+		t.Fatal("expected error for unknown OrderBy field")
+	}
+}
+
+func TestInvalidCollectionName(t *testing.T) {
+	db := testDB(t)
+	_, err := NewCollection[testItem](db, "items; DROP TABLE users")
+	if err == nil {
+		t.Fatal("expected error for invalid collection name")
+	}
+}
+
 func TestQueryImmutable(t *testing.T) {
 	coll := testCollection(t)
 

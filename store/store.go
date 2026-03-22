@@ -19,9 +19,19 @@ package store
 
 import (
 	"fmt"
+	"regexp"
 
 	appdb "github.com/michaelwinser/appbase/db"
 )
+
+// validIdentifier matches safe SQL identifiers (alphanumeric + underscore).
+var validIdentifier = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+
+// validOps is the set of allowed comparison operators for Where clauses.
+var validOps = map[string]bool{
+	"==": true, "=": true, "!=": true,
+	"<": true, ">": true, "<=": true, ">=": true,
+}
 
 // Direction for OrderBy.
 type Direction int
@@ -62,6 +72,10 @@ type Collection[T any] struct {
 // For SQL backends, it auto-creates the table and indexes.
 // For Firestore, initialization is a no-op (schemaless).
 func NewCollection[T any](db *appdb.DB, name string) (*Collection[T], error) {
+	if !validIdentifier.MatchString(name) {
+		return nil, fmt.Errorf("store: invalid collection name %q (must be alphanumeric/underscore)", name)
+	}
+
 	meta, err := parseStruct[T]()
 	if err != nil {
 		return nil, err
@@ -101,6 +115,36 @@ func (c *Collection[T]) Delete(id string) error {
 	return c.backend.delete(id)
 }
 
+// hasColumn returns true if field matches a known store-tagged column name.
+func (m *structMeta) hasColumn(field string) bool {
+	for _, fi := range m.Fields {
+		if fi.Column == field {
+			return true
+		}
+	}
+	return false
+}
+
+// validateWhere checks that field and op are safe for use in queries.
+func (q *Query[T]) validateWhere(field, op string) error {
+	if !q.coll.meta.hasColumn(field) {
+		return fmt.Errorf("store: unknown field %q in Where (valid: %s)", field, q.coll.meta.columnNames())
+	}
+	if !validOps[op] {
+		return fmt.Errorf("store: invalid operator %q in Where", op)
+	}
+	return nil
+}
+
+// columnNames returns a comma-separated list of valid column names for error messages.
+func (m *structMeta) columnNames() string {
+	names := make([]string, len(m.Fields))
+	for i, fi := range m.Fields {
+		names[i] = fi.Column
+	}
+	return fmt.Sprintf("[%s]", fmt.Sprintf("%s", names))
+}
+
 // All returns all entities in the collection (no filters).
 func (c *Collection[T]) All() ([]T, error) {
 	return c.backend.query(nil, nil, 0)
@@ -108,11 +152,15 @@ func (c *Collection[T]) All() ([]T, error) {
 
 // Where starts a query with a filter condition.
 // Supported operators: "==", "!=", "<", ">", "<=", ">=".
+// The field must match a store-tagged column name on the entity struct.
 func (c *Collection[T]) Where(field, op string, value interface{}) *Query[T] {
-	return &Query[T]{
-		coll:   c,
-		wheres: []whereClause{{Field: field, Op: op, Value: value}},
+	q := &Query[T]{coll: c}
+	if err := q.validateWhere(field, op); err != nil {
+		q.err = err
+		return q
 	}
+	q.wheres = []whereClause{{Field: field, Op: op, Value: value}}
+	return q
 }
 
 // Query builds a filtered/sorted query against a Collection.
@@ -122,11 +170,19 @@ type Query[T any] struct {
 	wheres  []whereClause
 	orderBy *orderByClause
 	limit   int
+	err     error // sticky validation error
 }
 
 // Where adds an additional filter (AND).
 func (q *Query[T]) Where(field, op string, value interface{}) *Query[T] {
 	newQ := *q
+	if newQ.err != nil {
+		return &newQ
+	}
+	if err := newQ.validateWhere(field, op); err != nil {
+		newQ.err = err
+		return &newQ
+	}
 	newQ.wheres = append(append([]whereClause{}, q.wheres...), whereClause{Field: field, Op: op, Value: value})
 	return &newQ
 }
@@ -135,6 +191,13 @@ func (q *Query[T]) Where(field, op string, value interface{}) *Query[T] {
 // to avoid composite index requirements.
 func (q *Query[T]) OrderBy(field string, dir Direction) *Query[T] {
 	newQ := *q
+	if newQ.err != nil {
+		return &newQ
+	}
+	if !q.coll.meta.hasColumn(field) {
+		newQ.err = fmt.Errorf("store: unknown field %q in OrderBy", field)
+		return &newQ
+	}
 	newQ.orderBy = &orderByClause{Field: field, Dir: dir}
 	return &newQ
 }
@@ -148,11 +211,17 @@ func (q *Query[T]) Limit(n int) *Query[T] {
 
 // All executes the query and returns matching entities.
 func (q *Query[T]) All() ([]T, error) {
+	if q.err != nil {
+		return nil, q.err
+	}
 	return q.coll.backend.query(q.wheres, q.orderBy, q.limit)
 }
 
 // First executes the query and returns the first matching entity, or nil.
 func (q *Query[T]) First() (*T, error) {
+	if q.err != nil {
+		return nil, q.err
+	}
 	results, err := q.Limit(1).All()
 	if err != nil {
 		return nil, err
