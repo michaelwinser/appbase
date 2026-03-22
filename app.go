@@ -110,6 +110,7 @@ func New(config Config) (*App, error) {
 
 	// Register auth middleware (must be before any routes)
 	srv.Router().Use(auth.Middleware(sessions, nil))
+	srv.Router().Use(auth.DevAuthMiddleware(sessions))
 
 	// Health endpoint
 	srv.Router().Get("/health", func(w http.ResponseWriter, r *http.Request) {

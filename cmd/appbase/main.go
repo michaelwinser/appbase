@@ -38,6 +38,7 @@ func main() {
 	rootCmd.AddCommand(deployCmd())
 	rootCmd.AddCommand(provisionCmd())
 	rootCmd.AddCommand(dockerCmd())
+	rootCmd.AddCommand(testSessionCmd())
 	rootCmd.AddCommand(versionCmd())
 
 	if err := rootCmd.Execute(); err != nil {
