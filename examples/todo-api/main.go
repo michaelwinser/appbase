@@ -47,6 +47,12 @@ func setup() error {
 	if err != nil {
 		return err
 	}
+
+	// Register routes for auto-serve (CLI commands without --server)
+	todoServer := &TodoServer{store: todoStore}
+	api.HandlerFromMux(todoServer, app.Server().Router())
+	appcli.AutoServeHandler = app.Server().Router()
+
 	return nil
 }
 
@@ -56,11 +62,8 @@ func main() {
 	cliApp.SetServeFunc(func() error {
 		r := app.Router()
 
-		// Register generated routes — the OpenAPI spec defines them
-		todoServer := &TodoServer{store: todoStore}
-		api.HandlerFromMux(todoServer, app.Server().Router())
-
-		// Root page with login
+		// Routes already registered in setup() for auto-serve.
+		// Just add the root page for the web UI.
 		r.Get("/", app.LoginPage(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "text/html")
 			w.Write([]byte(`<!DOCTYPE html>
@@ -90,12 +93,16 @@ func main() {
 		Short: "Add a new todo (via API)",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			serverFlag, _ := cmd.Flags().GetString("server")
-			serverURL := appcli.ResolveServerURL(serverFlag, "todo-api")
+			serverURL, cleanup, err := appcli.ResolveServerWithAutoServe(cmd, "todo-api")
+			if err != nil {
+				return err
+			}
+			defer cleanup()
 
 			httpClient, err := appcli.AuthenticatedClient("todo-api")
 			if err != nil {
-				return fmt.Errorf("not logged in — run: todo-api login --server %s", serverURL)
+				// Auto-serve mode: use a plain client (no auth needed for local)
+				httpClient = http.DefaultClient
 			}
 
 			client, err := api.NewClientWithResponses(serverURL, api.WithHTTPClient(httpClient))
@@ -123,12 +130,15 @@ func main() {
 		Use:   "list",
 		Short: "List todos (via API)",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			serverFlag, _ := cmd.Flags().GetString("server")
-			serverURL := appcli.ResolveServerURL(serverFlag, "todo-api")
+			serverURL, cleanup, err := appcli.ResolveServerWithAutoServe(cmd, "todo-api")
+			if err != nil {
+				return err
+			}
+			defer cleanup()
 
 			httpClient, err := appcli.AuthenticatedClient("todo-api")
 			if err != nil {
-				return fmt.Errorf("not logged in — run: todo-api login --server %s", serverURL)
+				httpClient = http.DefaultClient
 			}
 
 			client, err := api.NewClientWithResponses(serverURL, api.WithHTTPClient(httpClient))

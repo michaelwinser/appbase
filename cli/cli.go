@@ -13,6 +13,7 @@ package cli
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 
@@ -22,6 +23,14 @@ import (
 // IsServeCommand is true when the "serve" command is being executed.
 // Check this in your setupFn to set Config.Quiet for non-serve commands.
 var IsServeCommand bool
+
+// AutoServeHandler is set by the app after setup to enable auto-serve.
+// When a CLI command runs without --server, the CLI starts an ephemeral
+// server using this handler, runs the command, and tears down.
+// Set this in your setupFn after initializing the app:
+//
+//	appcli.AutoServeHandler = app.Server().Router()
+var AutoServeHandler http.Handler
 
 // CLI wraps a Cobra root command with appbase integration.
 type CLI struct {
@@ -175,4 +184,36 @@ func (c *CLI) Command(use, short string, runFn func(cmd *cobra.Command, args []s
 			return runFn(cmd, args)
 		},
 	}
+}
+
+// ResolveServerWithAutoServe returns a server URL, starting an ephemeral
+// server if needed. Call the returned cleanup function when done.
+//
+// Priority: --server flag → keychain → auto-serve → error
+//
+// Usage in CLI commands:
+//
+//	serverURL, cleanup, err := appcli.ResolveServerWithAutoServe(cmd, "myapp")
+//	if err != nil { return err }
+//	defer cleanup()
+func ResolveServerWithAutoServe(cmd *cobra.Command, appName string) (serverURL string, cleanup func(), err error) {
+	serverFlag, _ := cmd.Flags().GetString("server")
+	serverURL = ResolveServerURL(serverFlag, appName)
+
+	// If we got a URL from flag or keychain, use it (no auto-serve)
+	if serverFlag != "" || serverURL != "http://localhost:3000" {
+		return serverURL, func() {}, nil
+	}
+
+	// Auto-serve: start an ephemeral server if we have a handler
+	if AutoServeHandler != nil {
+		url, stop, err := AutoServe(AutoServeHandler)
+		if err != nil {
+			return "", nil, fmt.Errorf("auto-serve failed: %w", err)
+		}
+		return url, stop, nil
+	}
+
+	// Fall back to default URL (server may already be running)
+	return serverURL, func() {}, nil
 }

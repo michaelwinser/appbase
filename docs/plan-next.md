@@ -90,14 +90,83 @@ Ports declared in `app.yaml` instead of external portmanager.
 - Docker compose reads port from `app.yaml`
 - Portmanager becomes optional / deprecated
 
+## Next: App Runtime and Desktop
+
+### 9. Auto-Serve CLI
+
+CLI commands that talk to the API currently require a running server:
+```sh
+./travel serve &
+./travel add "Trip" --server http://localhost:3000
+```
+
+With auto-serve, the CLI detects no `--server` flag, silently starts an ephemeral
+server on a random port, runs the command, and tears down:
+```sh
+./travel add "Trip"    # just works
+```
+
+Implementation:
+- `cli/autoserve.go` — start server on `:0`, wait for ready, set server URL
+- Detect: no `--server` flag AND not the `serve` command → auto-serve
+- Server runs in a goroutine, command runs against `http://localhost:<port>`
+- Teardown on command completion
+- Optional: keep the server alive for a session (cache PID + port in /tmp)
+
+### 10. Wails Desktop Wrapper
+
+Wrap any appbase app as a native desktop application using Wails.
+No ports, no browser — the app runs as a native window.
+
+Pattern (proven in ../projects/electrician):
+- Wails `AssetServer.Handler` receives the app's HTTP handler
+- Frontend makes standard `fetch("/api/...")` calls — no Wails IPC needed
+- Same handler works in web mode (with port) and desktop mode (no port)
+- Same auth, same API, same store
+
+What appbase provides:
+- `app.Handler()` method returning `http.Handler` for Wails integration
+- Template `cmd/desktop/main.go` with Wails setup
+- Skill for adding Wails to an existing app
+- Dual-mode main: `serve` starts HTTP server, default launches Wails window
+
+Database safety:
+- SQLite file locking prevents concurrent access
+- Each app has its own `data/app.db` — no cross-app conflicts
+- Desktop mode and web mode should not run simultaneously on the same DB
+
+### 11. Traefik Gateway + Wildcard DNS
+
+Replace manual port management with automatic hostname-based routing:
+```
+travel.dev.local    → Traefik → localhost:random (travel-calendar)
+bookmarks.dev.local → Traefik → localhost:random (bookmarks)
+travel.nas.local    → Traefik → TrueNAS Docker  (travel-calendar)
+```
+
+Components:
+- **Traefik** — reverse proxy, routes by hostname, auto-discovers services
+- **Wildcard DNS** — `*.dev.local` via dnsmasq or /etc/hosts
+- **Service registration** — apps register via Docker labels or file config
+- **TLS** — optional, Traefik can handle Let's Encrypt or self-signed
+
+What appbase provides:
+- `deploy/traefik/` — Traefik config templates
+- `appbase register` — registers an app with the local Traefik instance
+- `app.yaml` gains a `hostname` field (e.g., `travel.dev.local`)
+- OAuth redirect URIs use hostnames instead of `localhost:PORT`
+- Works across targets: local dev, Docker, TrueNAS
+
+This eliminates portmanager entirely and gives every app a stable URL.
+
 ## Later
 
-### 9. GitHub Actions CI with Workload Identity Federation
+### 12. GitHub Actions CI with Workload Identity Federation
 - Zero-secrets CI via WIF
 - `./ab ci setup` command
 
-### 10. PostgreSQL Support
+### 13. PostgreSQL Support
 - Third store backend via `DATABASE_URL`
 
-### 11. Forgejo CI
+### 14. Forgejo CI
 - Workflow template for self-hosted CI
