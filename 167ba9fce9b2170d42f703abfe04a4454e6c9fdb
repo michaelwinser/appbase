@@ -1,0 +1,31 @@
+app.go
+  0e159da3e0bed3fb 10,19-24,81-86,173-174,192-205,210-248
+auth/clilogin.go
+  0e159da3e0bed3fb 1-109
+auth/google.go
+  0e159da3e0bed3fb 90,92-97
+cli/cli.go
+  0e159da3e0bed3fb 92-127
+cli/auth.go
+  0e159da3e0bed3fb 1-187
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "167ba9fce9b2170d42f703abfe04a4454e6c9fdb",
+  "prompts": {
+    "0e159da3e0bed3fb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c070a507-3782-4b76-8b23-aa21d56393c4",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 411,
+      "total_deletions": 15,
+      "accepted_lines": 409,
+      "overriden_lines": 0
+    }
+  }
+}
