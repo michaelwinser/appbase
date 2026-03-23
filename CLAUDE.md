@@ -255,6 +255,44 @@ Before implementing a workaround or quick fix, ask:
 
 If the pattern is insufficient, that's a design discussion — check with the user. Don't silently work around it.
 
+## Frontend & Devcontainer
+
+**Do not install Node.js, npm, pnpm, or frontend build tools on the host.**
+All frontend tooling runs inside the project's devcontainer.
+
+### For appbase itself
+
+The devcontainer config is in `.devcontainer/`. The `frontend` service has `openapi-typescript` pre-installed.
+
+```bash
+# Start the frontend container
+docker compose -f .devcontainer/docker-compose.yml up -d frontend
+
+# Run commands in it
+docker compose -f .devcontainer/docker-compose.yml exec frontend sh -c "cd /app/examples/todo-api/frontend && pnpm install"
+```
+
+### For apps that use appbase
+
+Each app creates its own `.devcontainer/Dockerfile.frontend` based on the appbase pattern. The `./dev` script manages the container lifecycle:
+
+```bash
+./dev codegen            # Go + frontend TypeScript types
+./dev frontend install   # pnpm install in container
+./dev frontend build     # vite build in container
+./dev frontend <cmd>     # any command in container
+```
+
+**Never run `npm`, `npx`, `pnpm`, `yarn`, or `pip` directly** — use `./dev frontend <cmd>`.
+The scaffold-app skill creates the devcontainer config and CLAUDE.md guidance for new apps.
+
+### Frontend type generation
+
+`openapi-typescript` generates TypeScript types from `openapi.yaml`:
+- Generated file: `frontend/src/lib/api-types.ts` (do not edit)
+- App code: `frontend/src/lib/api.ts` imports generated types and adds fetch wrappers
+- `./dev codegen` runs both Go and frontend codegen
+
 ## For AI Sessions (Claude Code)
 
 When working on appbase:
@@ -272,6 +310,7 @@ When working on an app that uses appbase:
 2. **Your domain entities and store are yours** — appbase provides the connection, you provide the CRUD
 3. **Use `appbase.UserID(r)` for auth** — don't roll your own session handling
 4. **Migrations are yours** — appbase runs them, you write them
+5. **Frontend tooling in devcontainer** — never install Node/npm on the host, use `./dev frontend <cmd>`
 
 ## Environment Variables
 

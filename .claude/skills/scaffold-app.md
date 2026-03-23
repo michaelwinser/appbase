@@ -10,13 +10,12 @@ trigger: When the user wants to create a new app built on the appbase module
 
 ```
 myapp/
+├── CLAUDE.md              # AI session instructions (devcontainer rules, patterns)
 ├── app.yaml               # App config (name, port, environments, secrets)
 ├── app.json               # Deploy script compat (name, gcpProject, region)
-├── CLAUDE.md              # App-specific AI instructions
 ├── go.mod                 # Depends on github.com/michaelwinser/appbase
 ├── openapi.yaml           # API spec (source of truth)
 ├── main.go                # Server + CLI entry point
-├── store.go               # Re-exports from internal/app
 ├── internal/app/          # Shared code (imported by both server and desktop)
 │   ├── store.go           # Entity store (store.Collection)
 │   └── server.go          # Implements api.ServerInterface
@@ -24,20 +23,24 @@ myapp/
 │   ├── server.gen.go
 │   └── client.gen.go
 ├── frontend/              # Svelte app (built in devcontainer)
+│   ├── package.json
 │   ├── src/
+│   │   ├── App.svelte
+│   │   └── lib/
+│   │       ├── api.ts           # Typed fetch wrappers
+│   │       └── api-types.ts     # Generated from openapi.yaml
 │   └── dist/              # Embedded in Go binary
+├── .devcontainer/         # Frontend tooling container
+│   └── Dockerfile.frontend
 ├── cmd/desktop/           # Wails desktop entry point (optional)
-│   ├── main.go
-│   ├── wails.json
-│   └── dist/              # Frontend assets (copied from frontend/dist)
 ├── usecases_test.go       # Use case tests (UC-XXXX)
 ├── e2e/                   # Shell-based E2E tests
 ├── deploy/
 │   ├── Dockerfile
 │   └── docker-compose.yml
 ├── dev                    # Project command script (sources dev-template.sh)
-└── .github/
-    └── workflows/ci.yml   # CI pipeline
+└── .claude/
+    └── settings.local.json
 ```
 
 ## Steps
@@ -50,7 +53,57 @@ go mod init github.com/michaelwinser/myapp
 go get github.com/michaelwinser/appbase
 ```
 
-### 2. Create app.json
+### 2. Create CLAUDE.md
+
+**This is critical.** The per-app CLAUDE.md ensures AI sessions follow the right patterns.
+
+```markdown
+# myapp
+
+An appbase application. See `../appbase/CLAUDE.md` for the full framework reference.
+
+## Development Tooling
+
+**Do not install Node.js, npm, pnpm, or frontend build tools on the host.**
+All frontend tooling runs inside the project's devcontainer.
+
+### Commands
+
+All development tasks go through `./dev`:
+
+- `./dev codegen` — Generate Go server/client + frontend TypeScript types
+- `./dev serve` — Start the web server
+- `./dev test` — Run Go tests
+- `./dev build` — Build the binary
+
+### Frontend work
+
+Never run `npm`, `npx`, `pnpm`, or `yarn` directly. Use:
+- `./dev codegen` — Regenerate frontend types from openapi.yaml
+- `./dev frontend install` — Install frontend dependencies
+- `./dev frontend build` — Build the frontend
+- `./dev frontend <cmd>` — Run any command in the frontend devcontainer
+
+The devcontainer starts automatically when needed and stops after the command completes.
+
+### Devcontainer
+
+The project has a `.devcontainer/Dockerfile.frontend` for frontend tooling.
+To add a new tool, add it to that Dockerfile — do not install globally or on the host.
+
+## Architecture
+
+- **Config:** `appbase.Config{LocalMode: appcli.IsLocalMode}` for CLI, `LocalMode: true` for desktop
+- **CLI commands:** Use `appcli.ClientForCommand(cmd, "myapp", app.Handler())` for API access
+- **DB path:** `cfg.DB.SQLitePath = appcli.LocalDataPath + "/app.db"` in setup()
+- **Direct store access:** Use `appcli.LocalUserID()` for user identity, not `"cli-user"`
+- **Frontend types:** Generated from openapi.yaml — don't hand-write TypeScript interfaces for API types
+- **Desktop:** Use `app.LocalHandler()` with Wails, not `app.Handler()`
+
+See `../appbase/docs/migration-local-mode.md` for the full pattern reference.
+```
+
+### 3. Create app.json
 
 ```json
 {
@@ -60,123 +113,136 @@ go get github.com/michaelwinser/appbase
 }
 ```
 
-The `gcpProject` field is empty until you run provisioning. The `name` is used as the Cloud Run service name and in the login page title.
-
-### 3. Create main.go
+### 4. Create main.go
 
 ```go
 package main
 
 import (
-    "log"
+    "context"
+    "embed"
+    "fmt"
+    "io/fs"
+    "net/http"
+
+    "github.com/spf13/cobra"
+
     "github.com/michaelwinser/appbase"
     appcli "github.com/michaelwinser/appbase/cli"
+    "github.com/michaelwinser/myapp/api"
 )
 
-const schema = `
-CREATE TABLE IF NOT EXISTS things (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    name TEXT NOT NULL,
-    created_at TEXT NOT NULL
-);
-`
+//go:embed frontend/dist/*
+var frontendDist embed.FS
 
 var (
-    app   *appbase.App
-    store *ThingStore
+    app       *appbase.App
+    thingStore *ThingStore
 )
 
 func setup() error {
     var err error
-    app, err = appbase.New(appbase.Config{Name: "MyApp"})
+    cfg := appbase.Config{
+        Name:      "myapp",
+        Quiet:     !appcli.IsServeCommand,
+        LocalMode: appcli.IsLocalMode,
+    }
+    if appcli.LocalDataPath != "" {
+        cfg.DB.SQLitePath = appcli.LocalDataPath + "/app.db"
+    }
+    app, err = appbase.New(cfg)
     if err != nil {
         return err
     }
-    if err := app.Migrate(schema); err != nil {
+    thingStore, err = NewThingStore(app.DB())
+    if err != nil {
         return err
     }
-    store = NewThingStore(app.DB())
+
+    // Register API routes
+    thingServer := &ThingServer{Store: thingStore}
+    api.HandlerFromMux(thingServer, app.Server().Router())
+
     return nil
 }
 
 func main() {
-    cli := appcli.New("myapp", "My application", setup)
+    cliApp := appcli.New("myapp", "My application", setup)
 
-    cli.SetServeFunc(func() error {
-        r := app.Router()
-
-        // Root page: login when unauthenticated, app content when authenticated
-        r.Get("/", app.LoginPage(myContentHandler))
-
-        // API routes (require auth via middleware)
-        r.Get("/api/things", listHandler)
-        r.Post("/api/things", createHandler)
-
+    cliApp.SetServeFunc(func() error {
+        r := app.Server().Router()
+        distFS, _ := fs.Sub(frontendDist, "frontend/dist")
+        fileServer := http.FileServer(http.FS(distFS))
+        r.Handle("/assets/*", fileServer)
+        r.Get("/*", app.LoginPage(func(w http.ResponseWriter, r *http.Request) {
+            r.URL.Path = "/"
+            fileServer.ServeHTTP(w, r)
+        }))
         return app.Serve()
     })
 
-    // Add CLI commands
-    cli.AddCommand(cli.Command("list", "List things", listCmd))
-
-    cli.Execute()
-}
-```
-
-### 4. Create the store (dual-backend)
-
-Define a backend interface and two implementations (SQL + Firestore):
-
-```go
-// store.go — interface and factory
-type thingBackend interface {
-    List(userID string) ([]Thing, error)
-    Create(thing *Thing) error
-}
-
-func NewThingStore(d *db.DB) *ThingStore {
-    if d.IsSQL() {
-        return &ThingStore{backend: &sqlThingBackend{db: d}}
+    // CLI commands use the generated HTTP client
+    listCmd := &cobra.Command{
+        Use:   "list",
+        Short: "List things",
+        RunE: func(cmd *cobra.Command, args []string) error {
+            if err := setup(); err != nil {
+                return err
+            }
+            httpClient, baseURL, cleanup, err := appcli.ClientForCommand(cmd, "myapp", app.Handler())
+            if err != nil {
+                return err
+            }
+            defer cleanup()
+            client, _ := api.NewClientWithResponses(baseURL, api.WithHTTPClient(httpClient))
+            resp, err := client.ListThingsWithResponse(context.Background())
+            if err != nil {
+                return err
+            }
+            for _, t := range *resp.JSON200 {
+                fmt.Println(t.Name)
+            }
+            return nil
+        },
     }
-    return &ThingStore{backend: &firestoreThingBackend{db: d}}
-}
+    cliApp.AddCommand(listCmd)
 
-// store_sql.go — SQL queries (SQLite/Postgres)
-// store_firestore.go — Firestore document operations
+    cliApp.Execute()
+}
 ```
 
-Always include `user_id` for multi-tenant queries. See `examples/todo/store*.go` for the complete pattern.
+### 5. Create the store
 
-### 5. Create handler.go
-
-HTTP handlers use `appbase.UserID(r)` for auth and `server.RespondJSON`/`server.RespondError` for responses.
-
-### 6. Write the PRD
-
-Create `docs/prd.md` with numbered use cases (UC-XXXX). Each use case has acceptance criteria that map directly to tests.
-
-### 7. Write Use Case Tests
+Use `store.Collection[T]` for automatic SQL/Firestore dual-backend:
 
 ```go
-func TestUseCases(t *testing.T) {
-    h := harness.New(t, setupTestApp)
-
-    h.Run("UC-0001", "Description from PRD", func(c *harness.Client) {
-        login(c)
-        resp := c.POST("/api/things", `{"name":"test"}`)
-        c.AssertStatus(resp, 201)
-    })
+// internal/app/store.go
+type ThingEntity struct {
+    ID        string `json:"id"        store:"id,pk"`
+    UserID    string `json:"userId"    store:"user_id,index"`
+    Name      string `json:"name"      store:"name"`
+    CreatedAt string `json:"createdAt" store:"created_at"`
 }
 ```
 
-### 8. Create the `./dev` Project Script
+See `examples/todo-api/internal/app/store.go` for the complete pattern.
 
-Every appbase project uses `./dev` as the standard project command script.
-The name is consistent across all projects — nothing to remember.
+### 6. Create the devcontainer
 
-**Option A: Source the shared template (recommended)**
+```dockerfile
+# .devcontainer/Dockerfile.frontend
+FROM node:20-alpine
+ENV PNPM_HOME="/root/.local/share/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN pnpm add -g openapi-typescript
+RUN apk add --no-cache curl git bash
+WORKDIR /app
+```
 
-Sources `deploy/dev-template.sh` from appbase so bug fixes propagate automatically:
+This is the appbase base pattern. Add app-specific tools (e.g., Tailwind, additional codegen) to this file.
+
+### 7. Create the `./dev` script
 
 ```sh
 #!/bin/sh
@@ -187,117 +253,68 @@ cd "$SCRIPT_DIR"
 # Source shared dev functions from appbase
 . "../appbase/deploy/dev-template.sh"
 
-# App-specific settings
 APP_BINARY_NAME="myapp"
 
-# Dispatch — add app-specific commands before the fallthrough
 case "${1:-help}" in
-    # import)  go run . import "$2" ;;
     *)  dev_dispatch "$@" ;;
-esac
-```
-
-The shared template provides: `build`, `test`, `e2e`, `serve`, `codegen`, `lint`, `lint-api`, `ci`, `provision`, `deploy`, `secret`, `docker`, `help`.
-
-Override any command by defining it before the fallthrough:
-```sh
-    build)  go build -tags desktop -o myapp . ;;  # custom build
-    *)      dev_dispatch "$@" ;;                  # everything else
-```
-
-**Option B: Standalone (for projects not adjacent to appbase)**
-
-If using the installed `appbase` CLI (no sibling directory), write `./dev` standalone.
-Delegates shared operations to `appbase`, handles app-specific commands directly:
-
-```sh
-#!/bin/sh
-set -e
-cd "$(dirname "$0")"
-
-case "${1:-help}" in
-    build)      go build -o myapp . ;;
-    test)       go test -v -count=1 ./... ;;
-    serve)      eval "$(appbase secret env 2>/dev/null)" && go run . serve ;;
-    codegen)    appbase codegen ;;
-    lint-api)   appbase lint-api ;;
-    ci)         appbase lint-api && go vet ./... && go build ./... && go test ./... ;;
-    deploy)     appbase deploy ;;
-    secret)     shift; appbase secret "$@" ;;
-    *)          appbase "$@" ;;  # delegate everything else
 esac
 ```
 
 Make it executable: `chmod +x dev`
 
-### Migrating from `./tc` to `./dev`
+### 8. Create the frontend
 
-If your project uses `./tc` (the old naming convention):
-1. `mv tc dev` — rename the script
-2. Update any CI/CD scripts that reference `./tc`
-3. Optionally, source the shared template to get automatic updates:
-   - Replace the inline commands with `. "../appbase/deploy/dev-template.sh"` + `dev_dispatch "$@"`
-   - Keep app-specific commands as case entries before the fallthrough
-
-### 9. Copy Deploy Templates
-
+Initialize in the devcontainer:
 ```bash
-mkdir deploy
-cp ../appbase/deploy/Dockerfile deploy/
-cp ../appbase/deploy/docker-compose.yml deploy/
+./dev frontend "pnpm create vite frontend --template svelte-ts"
+./dev frontend "cd frontend && pnpm install"
 ```
 
-Edit the Dockerfile `COPY` and `RUN go build` lines to match your app's structure.
+Add the API client pattern — see `examples/todo-api/frontend/src/lib/api.ts`.
+Run `./dev codegen` to generate `api-types.ts` from `openapi.yaml`.
 
-### 10. Add CI
+### 9. Configure Claude Code permissions
 
-Copy the CI workflow from appbase's `.github/workflows/ci.yml` and adapt.
-
-### 11. Configure Claude Code permissions
-
-Create `.claude/settings.local.json` to avoid repeated approval prompts:
+Create `.claude/settings.local.json`:
 
 ```json
 {
   "permissions": {
     "allow": [
       "Bash(go:*)", "Bash(git:*)", "Bash(sh:*)",
-      "Bash(appbase:*)", "Bash(gcloud:*)", "Bash(docker:*)",
-      "Bash(gh:*)", "Bash(oapi-codegen:*)"
+      "Bash(appbase:*)", "Bash(docker:*)",
+      "Bash(gh:*)", "Bash(./dev:*)"
     ]
   }
 }
 ```
 
-See `docs/claude-code-settings.md` in appbase for the full recommended set and explanation.
-
-### 12. Verify
+### 10. Verify
 
 ```bash
 go build ./...
 go test -v ./...
-go run . serve    # Test the server — login page at /
-go run . list     # Test the CLI
+go run . serve    # Server at localhost:3000
+go run . list     # CLI local mode
+./dev codegen     # Go + frontend types
 ```
 
 ## Choosing a Pattern
 
 | Pattern | When to use | Example |
 |---------|------------|---------|
-| **API-first (recommended)** | Apps with a web UI, CLI client, or external consumers | `examples/todo-api/` (Svelte frontend) |
+| **API-first (recommended)** | Apps with a web UI, CLI client, or external consumers | `examples/todo-api/` |
 | **Hand-written routes** | Simple apps, internal tools, prototypes | `examples/todo-store/` |
-| **Desktop (Wails)** | Native desktop app, same API | See `examples/todo-api/DESKTOP.md` |
+| **Desktop (Wails)** | Native desktop app, same API | `examples/todo-api/DESKTOP.md` |
 
 For API-first apps, see the `api-first` skill for the full workflow.
 
 ## Key Patterns
 
-- **Three runtime modes** — local CLI (`myapp list` — auto-serve, no login), web server (`myapp serve`), remote CLI (`myapp list --server https://...`). Apps work in all three without changes.
-- **Auto-serve CLI** — CLI commands auto-start an ephemeral server if no `--server` flag. No `serve &` needed.
-- **Login page is built-in** — `app.LoginPage(handler)` shows Google sign-in when unauthenticated. Skipped in local mode.
-- **CLI uses the API** — CLI commands use the generated HTTP client (not direct store access). `appcli.ResolveServerWithAutoServe()` handles server resolution.
-- **Desktop via app.Handler()** — use `app.Handler()` with Wails for native desktop apps. Same API, same store, no ports.
-- **Secrets in the keychain, not on disk** — `appbase secret set/import` stores in OS keychain. See `docs/secrets.md`.
-- **Schema is yours** — appbase manages sessions; you manage everything else via `store.Collection`.
-- **Provisioning is one command** — `appbase provision email@example.com` sets up GCP end-to-end.
-- **Lint the API pattern** — `appbase lint-api` verifies codegen is up to date.
+- **Three runtime modes** — local CLI (in-process transport), web server (full OAuth), remote CLI (keychain session)
+- **In-process transport** — CLI commands call the handler directly via `ClientForCommand`, no TCP
+- **Login page is built-in** — `app.LoginPage(handler)` shows Google sign-in. Skipped in LocalMode.
+- **CLI uses the API** — CLI commands use the generated HTTP client via `ClientForCommand`
+- **Desktop via LocalHandler()** — use `app.LocalHandler()` with Wails for native desktop apps
+- **Frontend types from spec** — `./dev codegen` generates both Go and TypeScript from `openapi.yaml`
+- **Devcontainer for frontend** — all Node/pnpm/vite runs in the container, never on the host
