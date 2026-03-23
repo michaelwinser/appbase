@@ -1,0 +1,35 @@
+cli/cli.go
+  0c8409285056e801 63-67
+auth/middleware.go
+  0c8409285056e801 5,67-72,78-81,83-84
+auth/middleware_test.go
+  0c8409285056e801 4,181-217
+db/sqlite.go
+  0c8409285056e801 7-8,14-21,26-31
+examples/todo-api/app.yaml
+  0c8409285056e801 11-13
+app.go
+  0c8409285056e801 306,312-322,324
+auth/login.go
+  0c8409285056e801 52-55,60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "20ff7129e69a5a76bae1f9c61de9db1479ce0e49",
+  "prompts": {
+    "0c8409285056e801": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f0bc80ee-12c9-4bcf-9618-5d41b2c6dfd0",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 97,
+      "total_deletions": 13,
+      "accepted_lines": 95,
+      "overriden_lines": 0
+    }
+  }
+}
