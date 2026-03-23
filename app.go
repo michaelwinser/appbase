@@ -303,14 +303,25 @@ func (a *App) registerAuthRoutes() {
 		})
 	})
 
-	// Login URL
+	// Login URL — browser navigation redirects to Google; fetch returns JSON.
 	r.Get("/api/auth/login", func(w http.ResponseWriter, r *http.Request) {
 		if a.google == nil || !a.google.IsConfigured() {
 			server.RespondError(w, http.StatusServiceUnavailable, "Google auth not configured")
 			return
 		}
+		loginURL := a.google.LoginURL(w, r)
+
+		// Browser navigation (e.g. login page link): redirect to Google directly.
+		// This ensures the state cookie is set in the same response as the redirect,
+		// avoiding races with concurrent requests (favicon, etc.).
+		if strings.Contains(r.Header.Get("Accept"), "text/html") {
+			http.Redirect(w, r, loginURL, http.StatusFound)
+			return
+		}
+
+		// SPA / fetch: return JSON with the URL.
 		server.RespondJSON(w, http.StatusOK, map[string]string{
-			"url": a.google.LoginURL(w, r),
+			"url": loginURL,
 		})
 	})
 

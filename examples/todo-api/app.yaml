@@ -8,6 +8,9 @@ store:
 environments:
   local:
     url: http://localhost:3000
+    auth:
+      client_id: ${secret:google-client-id}
+      client_secret: ${secret:google-client-secret}
 
   production:
     url: https://todo-api.run.app

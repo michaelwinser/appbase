@@ -60,6 +60,11 @@ func New(name, description string, setupFn func() error) *CLI {
 		SilenceUsage: true,
 		// Detect local mode for all commands (not just cli.Command()-created ones)
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			// Check command name since IsServeCommand hasn't been set yet
+			// (RunE runs after PersistentPreRun).
+			if cmd.Use == "serve" {
+				IsServeCommand = true
+			}
 			if !IsServeCommand {
 				serverFlag, _ := cmd.Flags().GetString("server")
 				if serverFlag == "" {

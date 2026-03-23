@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -63,17 +64,24 @@ func Middleware(sessions *SessionStore, exemptPrefixes []string) func(http.Handl
 			// Always try to populate context from session cookie
 			if cookie, err := r.Cookie(CookieName); err == nil && cookie.Value != "" {
 				session, err := sessions.Get(cookie.Value)
-				if err == nil && session != nil && !session.IsExpired() {
-					ctx := context.WithValue(r.Context(), userIDKey, session.UserID)
-					ctx = context.WithValue(ctx, emailKey, session.Email)
-					r = r.WithContext(ctx)
-				} else if session != nil && session.IsExpired() {
+				if err != nil {
+					log.Printf("auth: session lookup error for cookie %s…: %v", cookie.Value[:min(8, len(cookie.Value))], err)
+				} else if session == nil {
+					log.Printf("auth: session not found for cookie %s… (no error)", cookie.Value[:min(8, len(cookie.Value))])
+				} else if session.IsExpired() {
+					log.Printf("auth: session expired for %s", session.Email)
 					sessions.Delete(session.ID)
 					http.SetCookie(w, &http.Cookie{
 						Name: CookieName, Value: "", Path: "/",
 						MaxAge: -1, HttpOnly: true,
 					})
+				} else {
+					ctx := context.WithValue(r.Context(), userIDKey, session.UserID)
+					ctx = context.WithValue(ctx, emailKey, session.Email)
+					r = r.WithContext(ctx)
 				}
+			} else if err != nil {
+				log.Printf("auth: no %s cookie on %s %s", CookieName, r.Method, r.URL.Path)
 			}
 
 			if isExempt(r.URL.Path) {

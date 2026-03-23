@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -176,6 +177,43 @@ func TestMiddleware_InvalidSessionID(t *testing.T) {
 		t.Errorf("got %d, want %d", rec.Code, http.StatusUnauthorized)
 	}
 }
+
+func TestMiddleware_SessionStoreError(t *testing.T) {
+	// Simulate a session store that returns errors (e.g., SQLITE_BUSY).
+	// Before the fix, errors were silently swallowed and the request
+	// proceeded without context — the root cause of issue #22.
+	errStore := &SessionStore{backend: &errorBackend{}}
+	mw := Middleware(errStore, nil)
+
+	var gotUserID string
+	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotUserID = UserID(r)
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	// On an exempt path, middleware should still call next even if session lookup fails
+	req := httptest.NewRequest("GET", "/", nil)
+	req.AddCookie(&http.Cookie{Name: CookieName, Value: "some-session-id"})
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("got %d, want %d (exempt path should still proceed)", rec.Code, http.StatusOK)
+	}
+	if gotUserID != "" {
+		t.Errorf("userID = %q, want empty (session lookup failed)", gotUserID)
+	}
+}
+
+// errorBackend is a sessionBackend that always returns errors from Get.
+type errorBackend struct{}
+
+func (e *errorBackend) Init() error                             { return nil }
+func (e *errorBackend) Create(session *Session) error           { return nil }
+func (e *errorBackend) Get(id string) (*Session, error)         { return nil, fmt.Errorf("database is locked") }
+func (e *errorBackend) Delete(id string) error                  { return nil }
+func (e *errorBackend) DeleteExpired() error                    { return nil }
+func (e *errorBackend) DeleteByUser(userID string) error        { return nil }
 
 func TestWithIdentity(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)

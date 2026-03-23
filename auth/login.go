@@ -49,13 +49,15 @@ Sign in with Google
 </html>`))
 
 // ServeLoginPage writes the login page HTML response.
+// The login button links to /api/auth/login (which sets the state cookie and
+// redirects to Google) rather than embedding the Google URL directly. This
+// avoids a race where secondary requests (e.g. /favicon.ico) overwrite the
+// state cookie before the user clicks the link.
 func ServeLoginPage(w http.ResponseWriter, r *http.Request, appName string, google *GoogleAuth) {
 	data := LoginPageData{
 		AppName:     appName,
 		AuthEnabled: google != nil && google.IsConfigured(),
-	}
-	if data.AuthEnabled {
-		data.LoginURL = google.LoginURL(w, r)
+		LoginURL:    "/api/auth/login",
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	loginTemplate.Execute(w, data)
