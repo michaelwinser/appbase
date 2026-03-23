@@ -1,0 +1,25 @@
+CLAUDE.md
+  78f73468b094b081 258-295,313
+.claude/skills/scaffold-app.md
+  78f73468b094b081 13,26,28-31,33-34,42-43,56,58-106,116,122-129,132,135-136,139-140,145-153,157-158,161-165,170,172-180,184-208,210,214,216,219-224,228,230,232-240,243,245,265,267,269-270,273-274,276,278,285-286,292,297-299,306,308,314-320
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "cc5ce56c0135832ea02b346a045e8ce33392a720",
+  "prompts": {
+    "78f73468b094b081": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1faa2564-fcd5-4053-9d23-44be329f5aa2",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 213,
+      "total_deletions": 157,
+      "accepted_lines": 212,
+      "overriden_lines": 0
+    }
+  }
+}
