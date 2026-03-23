@@ -120,6 +120,22 @@ dev_ci() {
 
 # --- Shared helpers ---
 
+_ensure_appbase_cli() {
+    if command -v appbase >/dev/null 2>&1; then
+        return 0
+    fi
+    # Try GOPATH/bin directly
+    _gobin="$(go env GOPATH 2>/dev/null)/bin"
+    if [ -x "$_gobin/appbase" ]; then
+        export PATH="$PATH:$_gobin"
+        return 0
+    fi
+    echo "Error: appbase CLI not found."
+    echo "Install with: go install github.com/michaelwinser/appbase/cmd/appbase@latest"
+    echo "Then ensure \$(go env GOPATH)/bin is on your PATH."
+    return 1
+}
+
 _load_secrets() {
     exports=$(appbase secret env 2>/dev/null || true)
     if [ -n "$exports" ]; then eval "$exports"; return; fi
@@ -130,6 +146,13 @@ _load_secrets() {
 # Apps source this file and call dev_dispatch "$@"
 
 dev_dispatch() {
+    # Ensure appbase CLI is available for commands that need it
+    case "${1:-help}" in
+        codegen|lint-api|ci|provision|deploy|secret|docker)
+            _ensure_appbase_cli || exit 1
+            ;;
+    esac
+
     case "${1:-help}" in
         build)      shift; dev_build "$@" ;;
         test)       dev_test ;;
