@@ -72,6 +72,44 @@ dev_serve() {
     go run . serve
 }
 
+dev_codegen() {
+    # Go server + client
+    appbase codegen
+
+    # Frontend TypeScript types (if frontend exists)
+    if [ -f openapi.yaml ] && [ -d frontend/src/lib ]; then
+        echo "Generating frontend types from openapi.yaml..."
+        _run_frontend npx openapi-typescript openapi.yaml -o frontend/src/lib/api-types.ts
+    fi
+}
+
+_run_frontend() {
+    # Run a command in the frontend devcontainer if available, otherwise locally.
+    # Looks for .devcontainer/ in current dir or parent dirs.
+    _dc_file=""
+    _search="$(pwd)"
+    while [ "$_search" != "/" ]; do
+        if [ -f "$_search/.devcontainer/docker-compose.yml" ]; then
+            _dc_file="$_search/.devcontainer/docker-compose.yml"
+            # Working dir inside container: /app/<relative-path-from-compose-context>
+            _rel_path="$(pwd)"
+            _rel_path="${_rel_path#"$_search"/}"
+            break
+        fi
+        _search="$(dirname "$_search")"
+    done
+
+    if [ -n "$_dc_file" ] && docker compose -f "$_dc_file" ps frontend --status running >/dev/null 2>&1; then
+        docker compose -f "$_dc_file" exec -T frontend sh -c "cd /app/$_rel_path && $*"
+    elif command -v npx >/dev/null 2>&1; then
+        "$@"
+    else
+        echo "Error: frontend devcontainer not running and npx not found locally."
+        echo "Start with: docker compose -f .devcontainer/docker-compose.yml up -d frontend"
+        return 1
+    fi
+}
+
 dev_ci() {
     appbase lint-api 2>/dev/null || true
     go vet ./...
@@ -97,7 +135,7 @@ dev_dispatch() {
         test)       dev_test ;;
         e2e)        dev_e2e ;;
         serve)      dev_serve ;;
-        codegen)    appbase codegen ;;
+        codegen)    dev_codegen ;;
         lint)       go vet ./... ;;
         lint-api)   appbase lint-api ;;
         ci)         dev_ci ;;
@@ -121,7 +159,7 @@ Development:
   test               Run Go tests
   e2e                Run E2E smoke tests
   serve              Start the web server
-  codegen            Generate server + client from openapi.yaml
+  codegen            Generate server + client + frontend types from openapi.yaml
   lint               Run go vet
   lint-api           Verify codegen is up to date
   ci                 Full CI pipeline

@@ -1,15 +1,17 @@
 // API client for the todo app.
-// Types match the OpenAPI spec (openapi.yaml).
+// Domain types are generated from openapi.yaml — see api-types.ts.
+// Auth endpoints are appbase built-ins (not in the spec).
+
+import type { components } from './api-types';
 
 const API_BASE = '/api';
 
-export interface Todo {
-  id: string;
-  userId: string;
-  title: string;
-  done: boolean;
-  createdAt: string;
-}
+// --- Generated types (re-exported for convenience) ---
+
+export type Todo = components['schemas']['Todo'];
+export type CreateTodoRequest = components['schemas']['CreateTodoRequest'];
+
+// --- Auth (appbase built-ins, not in OpenAPI spec) ---
 
 export interface AuthStatus {
   loggedIn: boolean;
@@ -31,6 +33,8 @@ export async function logout(): Promise<void> {
   await fetch(`${API_BASE}/auth/logout`, { method: 'POST' });
 }
 
+// --- Domain API (matches openapi.yaml) ---
+
 export async function listTodos(): Promise<Todo[]> {
   const res = await fetch(`${API_BASE}/todos`);
   if (!res.ok) throw new Error(`Failed to list todos: ${res.statusText}`);
@@ -38,10 +42,11 @@ export async function listTodos(): Promise<Todo[]> {
 }
 
 export async function createTodo(title: string): Promise<Todo> {
+  const body: CreateTodoRequest = { title };
   const res = await fetch(`${API_BASE}/todos`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`Failed to create todo: ${res.statusText}`);
   return res.json();
