@@ -38,11 +38,12 @@ func (t *handlerTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 func ClientForCommand(cmd *cobra.Command, appName string, handler http.Handler) (
 	client *http.Client, baseURL string, cleanup func(), err error,
 ) {
-	serverFlag, _ := cmd.Flags().GetString("server")
-	serverURL := ResolveServerURL(serverFlag, appName)
-
-	// Remote mode: real HTTP with keychain auth
-	if serverFlag != "" || serverURL != "http://localhost:3000" {
+	// Use IsLocalMode (set by PersistentPreRun based on --server flag)
+	// rather than comparing resolved URLs, which breaks when the keychain
+	// has a saved server URL or the app uses a non-default port.
+	if !IsLocalMode {
+		serverFlag, _ := cmd.Flags().GetString("server")
+		serverURL := ResolveServerURL(serverFlag, appName)
 		httpClient, err := AuthenticatedClient(appName)
 		if err != nil {
 			return nil, "", nil, fmt.Errorf("not logged in — run: %s login", appName)
