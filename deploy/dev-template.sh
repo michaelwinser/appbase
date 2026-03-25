@@ -38,7 +38,7 @@ dev_build() {
                     cp -r frontend/dist/* cmd/desktop/dist/ 2>/dev/null || true
                 fi
                 export PATH="$PATH:$(go env GOPATH)/bin"
-                (cd cmd/desktop && wails build)
+                (cd cmd/desktop && wails build -tags desktop -skipbindings)
             else
                 echo "No cmd/desktop/ directory found. See examples/todo-api/DESKTOP.md."
                 return 1
