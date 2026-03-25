@@ -1,0 +1,23 @@
+deploy/dev-template.sh
+  0c8409285056e801 41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "4d380f37aa32982c4688d2dab93f6d4bdf7a2c4a",
+  "prompts": {
+    "0c8409285056e801": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f0bc80ee-12c9-4bcf-9618-5d41b2c6dfd0",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 2,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    }
+  }
+}
