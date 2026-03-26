@@ -5,14 +5,18 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 )
 
 type contextKey string
 
 const (
-	userIDKey  contextKey = "appbase_userID"
-	emailKey   contextKey = "appbase_email"
-	CookieName            = "app_session"
+	userIDKey       contextKey = "appbase_userID"
+	emailKey        contextKey = "appbase_email"
+	accessTokenKey  contextKey = "appbase_accessToken"
+	refreshTokenKey contextKey = "appbase_refreshToken"
+	tokenExpiryKey  contextKey = "appbase_tokenExpiry"
+	CookieName                 = "app_session"
 )
 
 // WithIdentity returns a context with the given user identity set.
@@ -37,6 +41,31 @@ func Email(r *http.Request) string {
 		return v
 	}
 	return ""
+}
+
+// AccessToken returns the OAuth access token from the request context.
+// Returns empty string if no token is stored (e.g., local mode sessions).
+func AccessToken(r *http.Request) string {
+	if v, ok := r.Context().Value(accessTokenKey).(string); ok {
+		return v
+	}
+	return ""
+}
+
+// RefreshToken returns the OAuth refresh token from the request context.
+func RefreshToken(r *http.Request) string {
+	if v, ok := r.Context().Value(refreshTokenKey).(string); ok {
+		return v
+	}
+	return ""
+}
+
+// TokenExpiry returns the OAuth access token expiry time from the request context.
+func TokenExpiry(r *http.Request) time.Time {
+	if v, ok := r.Context().Value(tokenExpiryKey).(time.Time); ok {
+		return v
+	}
+	return time.Time{}
 }
 
 // Middleware returns HTTP middleware that enforces session authentication.
@@ -75,6 +104,9 @@ func Middleware(sessions *SessionStore, exemptPrefixes []string) func(http.Handl
 				} else if session != nil {
 					ctx := context.WithValue(r.Context(), userIDKey, session.UserID)
 					ctx = context.WithValue(ctx, emailKey, session.Email)
+					ctx = context.WithValue(ctx, accessTokenKey, session.AccessToken)
+					ctx = context.WithValue(ctx, refreshTokenKey, session.RefreshToken)
+					ctx = context.WithValue(ctx, tokenExpiryKey, session.TokenExpiry)
 					r = r.WithContext(ctx)
 				}
 			}

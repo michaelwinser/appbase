@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
@@ -8,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -255,6 +257,16 @@ func (g *GoogleAuth) HandleCallback(r *http.Request, code string) (*LoginResult,
 		return nil, fmt.Errorf("creating session: %w", err)
 	}
 
+	// Store OAuth tokens in session for API access
+	tokenExpiry := time.Now().Add(time.Duration(tokens.ExpiresIn) * time.Second)
+	if err := g.sessions.UpdateTokens(session.ID, tokens.AccessToken, tokens.RefreshToken, tokenExpiry); err != nil {
+		log.Printf("auth: failed to store OAuth tokens: %v", err)
+	} else {
+		session.AccessToken = tokens.AccessToken
+		session.RefreshToken = tokens.RefreshToken
+		session.TokenExpiry = tokenExpiry
+	}
+
 	// Lazy cleanup
 	go g.sessions.DeleteExpired()
 
@@ -263,7 +275,7 @@ func (g *GoogleAuth) HandleCallback(r *http.Request, code string) (*LoginResult,
 		Email:        email,
 		AccessToken:  tokens.AccessToken,
 		RefreshToken: tokens.RefreshToken,
-		ExpiresAt:    time.Now().Add(time.Duration(tokens.ExpiresIn) * time.Second),
+		ExpiresAt:    tokenExpiry,
 		Scopes:       tokens.Scope,
 	}, nil
 }
@@ -279,6 +291,60 @@ func (g *GoogleAuth) SetSessionCookie(w http.ResponseWriter, r *http.Request, se
 		SameSite: http.SameSiteLaxMode,
 		Secure:   r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https",
 	})
+}
+
+// RefreshAccessToken uses the refresh token to get a new access token from Google.
+// Updates both the session store and the in-memory session object.
+// Returns the new access token.
+func (g *GoogleAuth) RefreshAccessToken(ctx context.Context, session *Session) (string, error) {
+	if session.RefreshToken == "" {
+		return "", fmt.Errorf("no refresh token available")
+	}
+
+	data := url.Values{}
+	data.Set("client_id", g.clientID)
+	data.Set("client_secret", g.clientSecret)
+	data.Set("refresh_token", session.RefreshToken)
+	data.Set("grant_type", "refresh_token")
+
+	req, err := http.NewRequestWithContext(ctx, "POST", "https://oauth2.googleapis.com/token", strings.NewReader(data.Encode()))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := g.httpClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("token refresh failed: %s", string(body))
+	}
+
+	var tokens tokenResponse
+	if err := json.NewDecoder(resp.Body).Decode(&tokens); err != nil {
+		return "", err
+	}
+
+	// Google sometimes rotates refresh tokens
+	newRefresh := session.RefreshToken
+	if tokens.RefreshToken != "" {
+		newRefresh = tokens.RefreshToken
+	}
+
+	tokenExpiry := time.Now().Add(time.Duration(tokens.ExpiresIn) * time.Second)
+	if err := g.sessions.UpdateTokens(session.ID, tokens.AccessToken, newRefresh, tokenExpiry); err != nil {
+		return "", fmt.Errorf("storing refreshed token: %w", err)
+	}
+
+	session.AccessToken = tokens.AccessToken
+	session.RefreshToken = newRefresh
+	session.TokenExpiry = tokenExpiry
+
+	return tokens.AccessToken, nil
 }
 
 // ClearSessionCookie clears the session cookie.

@@ -14,7 +14,7 @@ type sqlSessionBackend struct {
 }
 
 func (b *sqlSessionBackend) Init() error {
-	return b.db.Migrate(`
+	if err := b.db.Migrate(`
 		CREATE TABLE IF NOT EXISTS sessions (
 			id TEXT PRIMARY KEY,
 			user_id TEXT NOT NULL,
@@ -24,7 +24,19 @@ func (b *sqlSessionBackend) Init() error {
 		);
 		CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 		CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
-	`)
+	`); err != nil {
+		return err
+	}
+	// Add token columns for OAuth API access (safe: ignore "duplicate column" errors
+	// from databases that already have them).
+	for _, stmt := range []string{
+		"ALTER TABLE sessions ADD COLUMN access_token TEXT DEFAULT ''",
+		"ALTER TABLE sessions ADD COLUMN refresh_token TEXT DEFAULT ''",
+		"ALTER TABLE sessions ADD COLUMN token_expiry TEXT DEFAULT ''",
+	} {
+		b.db.Exec(stmt) // ignore errors — column may already exist
+	}
+	return nil
 }
 
 func (b *sqlSessionBackend) Create(session *Session) error {
@@ -42,11 +54,14 @@ func (b *sqlSessionBackend) Create(session *Session) error {
 
 func (b *sqlSessionBackend) Get(id string) (*Session, error) {
 	row := b.db.QueryRow(
-		`SELECT id, user_id, email, expires_at, created_at FROM sessions WHERE id = ?`, id,
+		`SELECT id, user_id, email, expires_at, created_at, `+
+			`COALESCE(access_token, ''), COALESCE(refresh_token, ''), COALESCE(token_expiry, '') `+
+			`FROM sessions WHERE id = ?`, id,
 	)
 	var session Session
-	var expiresAt, createdAt string
-	err := row.Scan(&session.ID, &session.UserID, &session.Email, &expiresAt, &createdAt)
+	var expiresAt, createdAt, tokenExpiry string
+	err := row.Scan(&session.ID, &session.UserID, &session.Email, &expiresAt, &createdAt,
+		&session.AccessToken, &session.RefreshToken, &tokenExpiry)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -62,7 +77,21 @@ func (b *sqlSessionBackend) Get(id string) (*Session, error) {
 	if parseErr != nil {
 		return nil, fmt.Errorf("parsing session created_at %q: %w", createdAt, parseErr)
 	}
+	if tokenExpiry != "" {
+		session.TokenExpiry, _ = time.Parse(time.RFC3339, tokenExpiry)
+	}
 	return &session, nil
+}
+
+func (b *sqlSessionBackend) UpdateTokens(sessionID, accessToken, refreshToken string, tokenExpiry time.Time) error {
+	_, err := b.db.Exec(
+		`UPDATE sessions SET access_token = ?, refresh_token = ?, token_expiry = ? WHERE id = ?`,
+		accessToken, refreshToken, tokenExpiry.Format(time.RFC3339), sessionID,
+	)
+	if err != nil {
+		return fmt.Errorf("updating tokens: %w", err)
+	}
+	return nil
 }
 
 func (b *sqlSessionBackend) Delete(id string) error {

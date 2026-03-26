@@ -17,6 +17,10 @@ type Session struct {
 	Email     string
 	ExpiresAt time.Time
 	CreatedAt time.Time
+	// OAuth tokens (empty for local/desktop sessions without OAuth).
+	AccessToken  string
+	RefreshToken string
+	TokenExpiry  time.Time
 }
 
 // IsExpired returns true if the session has expired.
@@ -24,11 +28,18 @@ func (s *Session) IsExpired() bool {
 	return time.Now().After(s.ExpiresAt)
 }
 
+// TokenExpired returns true if the OAuth access token has expired.
+// Returns true if no token expiry is set (no tokens stored).
+func (s *Session) TokenExpired() bool {
+	return s.TokenExpiry.IsZero() || time.Now().After(s.TokenExpiry)
+}
+
 // sessionBackend abstracts session persistence across SQL and Firestore.
 type sessionBackend interface {
 	Init() error
 	Create(session *Session) error
 	Get(id string) (*Session, error)
+	UpdateTokens(sessionID, accessToken, refreshToken string, tokenExpiry time.Time) error
 	Delete(id string) error
 	DeleteExpired() error
 	DeleteByUser(userID string) error
@@ -73,6 +84,11 @@ func (s *SessionStore) Create(userID, email string, ttl time.Duration) (*Session
 // Get retrieves a session by ID. Returns nil if not found.
 func (s *SessionStore) Get(id string) (*Session, error) {
 	return s.backend.Get(id)
+}
+
+// UpdateTokens stores OAuth tokens on an existing session.
+func (s *SessionStore) UpdateTokens(sessionID, accessToken, refreshToken string, tokenExpiry time.Time) error {
+	return s.backend.UpdateTokens(sessionID, accessToken, refreshToken, tokenExpiry)
 }
 
 // Delete removes a session by ID.

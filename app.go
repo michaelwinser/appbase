@@ -455,3 +455,10 @@ func UserID(r *http.Request) string {
 func Email(r *http.Request) string {
 	return auth.Email(r)
 }
+
+// AccessToken returns the OAuth access token from the request context.
+// Returns empty string for local/desktop sessions without OAuth.
+// Convenience wrapper around auth.AccessToken.
+func AccessToken(r *http.Request) string {
+	return auth.AccessToken(r)
+}

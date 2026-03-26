@@ -208,12 +208,45 @@ func TestMiddleware_SessionStoreError(t *testing.T) {
 // errorBackend is a sessionBackend that always returns errors from Get.
 type errorBackend struct{}
 
-func (e *errorBackend) Init() error                             { return nil }
-func (e *errorBackend) Create(session *Session) error           { return nil }
-func (e *errorBackend) Get(id string) (*Session, error)         { return nil, fmt.Errorf("database is locked") }
-func (e *errorBackend) Delete(id string) error                  { return nil }
-func (e *errorBackend) DeleteExpired() error                    { return nil }
-func (e *errorBackend) DeleteByUser(userID string) error        { return nil }
+func (e *errorBackend) Init() error                        { return nil }
+func (e *errorBackend) Create(session *Session) error        { return nil }
+func (e *errorBackend) Get(id string) (*Session, error)      { return nil, fmt.Errorf("database is locked") }
+func (e *errorBackend) UpdateTokens(string, string, string, time.Time) error { return nil }
+func (e *errorBackend) Delete(id string) error               { return nil }
+func (e *errorBackend) DeleteExpired() error                 { return nil }
+func (e *errorBackend) DeleteByUser(userID string) error     { return nil }
+
+func TestMiddleware_PopulatesTokenContext(t *testing.T) {
+	sessions, mw := setupTestMiddleware(t)
+
+	session, err := sessions.Create("user1", "user1@test.com", 1*time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expiry := time.Now().Add(1 * time.Hour)
+	if err := sessions.UpdateTokens(session.ID, "tok_abc", "ref_xyz", expiry); err != nil {
+		t.Fatal(err)
+	}
+
+	var gotToken, gotRefresh string
+	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotToken = AccessToken(r)
+		gotRefresh = RefreshToken(r)
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest("GET", "/api/todos", nil)
+	req.AddCookie(&http.Cookie{Name: CookieName, Value: session.ID})
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if gotToken != "tok_abc" {
+		t.Errorf("AccessToken = %q, want %q", gotToken, "tok_abc")
+	}
+	if gotRefresh != "ref_xyz" {
+		t.Errorf("RefreshToken = %q, want %q", gotRefresh, "ref_xyz")
+	}
+}
 
 func TestWithIdentity(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)
