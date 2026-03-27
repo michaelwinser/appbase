@@ -1,0 +1,25 @@
+config/appconfig.go
+  0c8409285056e801 62,197-199
+app.go
+  0c8409285056e801 123-128,130-143
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "83c4aec3420680534c83625dae6ce9b0eaf3fb52",
+  "prompts": {
+    "0c8409285056e801": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f0bc80ee-12c9-4bcf-9618-5d41b2c6dfd0",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 24,
+      "total_deletions": 6,
+      "accepted_lines": 24,
+      "overriden_lines": 0
+    }
+  }
+}
