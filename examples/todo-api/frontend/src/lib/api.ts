@@ -33,6 +33,14 @@ export async function logout(): Promise<void> {
   await fetch(`${API_BASE}/auth/logout`, { method: 'POST' });
 }
 
+// --- Sync types ---
+
+export interface SyncResult {
+  synced: number;
+  errors: number;
+  message?: string;
+}
+
 // --- Domain API (matches openapi.yaml) ---
 
 export async function listTodos(): Promise<Todo[]> {
@@ -55,4 +63,18 @@ export async function createTodo(title: string): Promise<Todo> {
 export async function deleteTodo(id: string): Promise<void> {
   const res = await fetch(`${API_BASE}/todos/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error(`Failed to delete todo: ${res.statusText}`);
+}
+
+// --- Google Tasks sync ---
+
+export async function pushToGoogleTasks(): Promise<SyncResult> {
+  const res = await fetch(`${API_BASE}/tasks/push`, { method: 'POST' });
+  if (!res.ok) throw new Error(`Push failed: ${res.statusText}`);
+  return res.json();
+}
+
+export async function pullFromGoogleTasks(): Promise<SyncResult> {
+  const res = await fetch(`${API_BASE}/tasks/pull`, { method: 'POST' });
+  if (!res.ok) throw new Error(`Pull failed: ${res.statusText}`);
+  return res.json();
 }

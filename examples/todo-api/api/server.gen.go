@@ -39,6 +39,13 @@ type OkResponse struct {
 	Ok *string `json:"ok,omitempty"`
 }
 
+// SyncResult defines model for SyncResult.
+type SyncResult struct {
+	Errors  int     `json:"errors"`
+	Message *string `json:"message,omitempty"`
+	Synced  int     `json:"synced"`
+}
+
 // Todo defines model for Todo.
 type Todo struct {
 	CreatedAt time.Time `json:"createdAt"`
@@ -59,6 +66,12 @@ type CreateTodoJSONRequestBody = CreateTodoRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Import tasks from Google Tasks as todos
+	// (POST /api/tasks/pull)
+	PullFromGoogleTasks(w http.ResponseWriter, r *http.Request)
+	// Push local todos to Google Tasks
+	// (POST /api/tasks/push)
+	PushToGoogleTasks(w http.ResponseWriter, r *http.Request)
 	// List all todos for the authenticated user
 	// (GET /api/todos)
 	ListTodos(w http.ResponseWriter, r *http.Request)
@@ -73,6 +86,18 @@ type ServerInterface interface {
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
+
+// Import tasks from Google Tasks as todos
+// (POST /api/tasks/pull)
+func (_ Unimplemented) PullFromGoogleTasks(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Push local todos to Google Tasks
+// (POST /api/tasks/push)
+func (_ Unimplemented) PushToGoogleTasks(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
 
 // List all todos for the authenticated user
 // (GET /api/todos)
@@ -100,6 +125,46 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// PullFromGoogleTasks operation middleware
+func (siw *ServerInterfaceWrapper) PullFromGoogleTasks(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PullFromGoogleTasks(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PushToGoogleTasks operation middleware
+func (siw *ServerInterfaceWrapper) PushToGoogleTasks(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, SessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PushToGoogleTasks(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // ListTodos operation middleware
 func (siw *ServerInterfaceWrapper) ListTodos(w http.ResponseWriter, r *http.Request) {
@@ -286,6 +351,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/tasks/pull", wrapper.PullFromGoogleTasks)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/tasks/push", wrapper.PushToGoogleTasks)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/todos", wrapper.ListTodos)
 	})
 	r.Group(func(r chi.Router) {
@@ -301,18 +372,21 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
+	"/xQajbIDDQAA",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

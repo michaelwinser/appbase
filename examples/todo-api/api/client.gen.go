@@ -89,6 +89,12 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
+	// PullFromGoogleTasks request
+	PullFromGoogleTasks(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PushToGoogleTasks request
+	PushToGoogleTasks(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListTodos request
 	ListTodos(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -99,6 +105,30 @@ type ClientInterface interface {
 
 	// DeleteTodo request
 	DeleteTodo(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
+}
+
+func (c *Client) PullFromGoogleTasks(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPullFromGoogleTasksRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PushToGoogleTasks(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPushToGoogleTasksRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
 }
 
 func (c *Client) ListTodos(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -147,6 +177,60 @@ func (c *Client) DeleteTodo(ctx context.Context, id string, reqEditors ...Reques
 		return nil, err
 	}
 	return c.Client.Do(req)
+}
+
+// NewPullFromGoogleTasksRequest generates requests for PullFromGoogleTasks
+func NewPullFromGoogleTasksRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/tasks/pull")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewPushToGoogleTasksRequest generates requests for PushToGoogleTasks
+func NewPushToGoogleTasksRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/api/tasks/push")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
 }
 
 // NewListTodosRequest generates requests for ListTodos
@@ -293,6 +377,12 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
+	// PullFromGoogleTasksWithResponse request
+	PullFromGoogleTasksWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*PullFromGoogleTasksResponse, error)
+
+	// PushToGoogleTasksWithResponse request
+	PushToGoogleTasksWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*PushToGoogleTasksResponse, error)
+
 	// ListTodosWithResponse request
 	ListTodosWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListTodosResponse, error)
 
@@ -303,6 +393,54 @@ type ClientWithResponsesInterface interface {
 
 	// DeleteTodoWithResponse request
 	DeleteTodoWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*DeleteTodoResponse, error)
+}
+
+type PullFromGoogleTasksResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *SyncResult
+	JSON401      *Unauthorized
+	JSON403      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r PullFromGoogleTasksResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PullFromGoogleTasksResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type PushToGoogleTasksResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *SyncResult
+	JSON401      *Unauthorized
+	JSON403      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r PushToGoogleTasksResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PushToGoogleTasksResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
 }
 
 type ListTodosResponse struct {
@@ -375,6 +513,24 @@ func (r DeleteTodoResponse) StatusCode() int {
 	return 0
 }
 
+// PullFromGoogleTasksWithResponse request returning *PullFromGoogleTasksResponse
+func (c *ClientWithResponses) PullFromGoogleTasksWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*PullFromGoogleTasksResponse, error) {
+	rsp, err := c.PullFromGoogleTasks(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePullFromGoogleTasksResponse(rsp)
+}
+
+// PushToGoogleTasksWithResponse request returning *PushToGoogleTasksResponse
+func (c *ClientWithResponses) PushToGoogleTasksWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*PushToGoogleTasksResponse, error) {
+	rsp, err := c.PushToGoogleTasks(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePushToGoogleTasksResponse(rsp)
+}
+
 // ListTodosWithResponse request returning *ListTodosResponse
 func (c *ClientWithResponses) ListTodosWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListTodosResponse, error) {
 	rsp, err := c.ListTodos(ctx, reqEditors...)
@@ -408,6 +564,86 @@ func (c *ClientWithResponses) DeleteTodoWithResponse(ctx context.Context, id str
 		return nil, err
 	}
 	return ParseDeleteTodoResponse(rsp)
+}
+
+// ParsePullFromGoogleTasksResponse parses an HTTP response from a PullFromGoogleTasksWithResponse call
+func ParsePullFromGoogleTasksResponse(rsp *http.Response) (*PullFromGoogleTasksResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PullFromGoogleTasksResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SyncResult
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePushToGoogleTasksResponse parses an HTTP response from a PushToGoogleTasksWithResponse call
+func ParsePushToGoogleTasksResponse(rsp *http.Response) (*PushToGoogleTasksResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PushToGoogleTasksResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest SyncResult
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest Unauthorized
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON401 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 403:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON403 = &dest
+
+	}
+
+	return response, nil
 }
 
 // ParseListTodosResponse parses an HTTP response from a ListTodosWithResponse call

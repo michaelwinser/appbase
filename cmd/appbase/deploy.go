@@ -163,6 +163,7 @@ func provisionCmd() *cobra.Command {
 				"artifactregistry.googleapis.com",
 				"secretmanager.googleapis.com",
 				"iap.googleapis.com",
+				"tasks.googleapis.com",
 			}
 			for _, api := range apis {
 				fmt.Printf("  Enabling %s...\n", api)

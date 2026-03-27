@@ -68,6 +68,50 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/tasks/push:
+    post:
+      operationId: pushToGoogleTasks
+      summary: Push local todos to Google Tasks
+      security:
+        - session: []
+      responses:
+        '200':
+          description: Push result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: No Google API access token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/tasks/pull:
+    post:
+      operationId: pullFromGoogleTasks
+      summary: Import tasks from Google Tasks as todos
+      security:
+        - session: []
+      responses:
+        '200':
+          description: Pull result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: No Google API access token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
   schemas:
     Todo:
@@ -98,6 +142,17 @@ components:
       type: object
       properties:
         ok:
+          type: string
+
+    SyncResult:
+      type: object
+      required: [synced, errors]
+      properties:
+        synced:
+          type: integer
+        errors:
+          type: integer
+        message:
           type: string
 
     ErrorResponse:

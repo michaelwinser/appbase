@@ -7,6 +7,8 @@
     listTodos,
     createTodo,
     deleteTodo,
+    pushToGoogleTasks,
+    pullFromGoogleTasks,
     type Todo,
     type AuthStatus,
   } from './lib/api';
@@ -16,6 +18,7 @@
   let newTitle = '';
   let loading = true;
   let error = '';
+  let syncMsg = '';
 
   onMount(async () => {
     try {
@@ -66,6 +69,29 @@
     }
   }
 
+  async function handlePush() {
+    try {
+      syncMsg = 'Pushing...';
+      const result = await pushToGoogleTasks();
+      syncMsg = result.message || `Pushed ${result.synced} todos`;
+    } catch (e) {
+      syncMsg = 'Push failed — you may need to re-login to grant Tasks permission';
+    }
+  }
+
+  async function handlePull() {
+    try {
+      syncMsg = 'Pulling...';
+      const result = await pullFromGoogleTasks();
+      syncMsg = result.message || `Imported ${result.synced} tasks`;
+      if (result.synced > 0) {
+        todos = await listTodos();
+      }
+    } catch (e) {
+      syncMsg = 'Pull failed — you may need to re-login to grant Tasks permission';
+    }
+  }
+
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'Enter') handleAdd();
   }
@@ -112,6 +138,15 @@
           </li>
         {/each}
       </ul>
+    {/if}
+
+    <div class="sync-bar">
+      <span class="sync-label">Google Tasks</span>
+      <button class="sync-btn" onclick={handlePush}>Push</button>
+      <button class="sync-btn" onclick={handlePull}>Pull</button>
+    </div>
+    {#if syncMsg}
+      <p class="sync-msg">{syncMsg}</p>
     {/if}
   {/if}
 </main>
@@ -238,5 +273,40 @@
 
   .todo-list .delete:hover {
     opacity: 1;
+  }
+
+  .sync-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+  }
+
+  .sync-label {
+    color: #666;
+    font-size: 0.85rem;
+    margin-right: auto;
+  }
+
+  .sync-btn {
+    padding: 0.4rem 0.8rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: white;
+    font-size: 0.85rem;
+    cursor: pointer;
+    color: #555;
+  }
+
+  .sync-btn:hover {
+    background: #f0f0f0;
+  }
+
+  .sync-msg {
+    color: #666;
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
   }
 </style>

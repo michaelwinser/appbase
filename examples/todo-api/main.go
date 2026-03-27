@@ -57,7 +57,7 @@ func setup() error {
 	}
 
 	// Register API routes
-	todoServer := &TodoServer{Store: todoStore}
+	todoServer := &TodoServer{Store: todoStore, Google: app.Google()}
 	api.HandlerFromMux(todoServer, app.Server().Router())
 
 	return nil
@@ -171,6 +171,72 @@ func main() {
 		},
 	}
 	cliApp.AddCommand(listCmd)
+
+	pushCmd := &cobra.Command{
+		Use:   "push",
+		Short: "Push todos to Google Tasks",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := setup(); err != nil {
+				return err
+			}
+			httpClient, baseURL, cleanup, err := appcli.ClientForCommand(cmd, "todo-api", app.Handler())
+			if err != nil {
+				return err
+			}
+			defer cleanup()
+
+			client, err := api.NewClientWithResponses(baseURL, api.WithHTTPClient(httpClient))
+			if err != nil {
+				return err
+			}
+
+			resp, err := client.PushToGoogleTasksWithResponse(context.Background())
+			if err != nil {
+				return err
+			}
+			if resp.StatusCode() != http.StatusOK {
+				return fmt.Errorf("server returned %d: %s", resp.StatusCode(), string(resp.Body))
+			}
+			if resp.JSON200.Message != nil {
+				fmt.Println(*resp.JSON200.Message)
+			}
+			return nil
+		},
+	}
+	cliApp.AddCommand(pushCmd)
+
+	pullCmd := &cobra.Command{
+		Use:   "pull",
+		Short: "Import tasks from Google Tasks",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := setup(); err != nil {
+				return err
+			}
+			httpClient, baseURL, cleanup, err := appcli.ClientForCommand(cmd, "todo-api", app.Handler())
+			if err != nil {
+				return err
+			}
+			defer cleanup()
+
+			client, err := api.NewClientWithResponses(baseURL, api.WithHTTPClient(httpClient))
+			if err != nil {
+				return err
+			}
+
+			resp, err := client.PullFromGoogleTasksWithResponse(context.Background())
+			if err != nil {
+				return err
+			}
+			if resp.StatusCode() != http.StatusOK {
+				return fmt.Errorf("server returned %d: %s", resp.StatusCode(), string(resp.Body))
+			}
+			if resp.JSON200.Message != nil {
+				fmt.Println(*resp.JSON200.Message)
+			}
+			return nil
+		},
+	}
+	cliApp.AddCommand(pullCmd)
 
 	cliApp.Execute()
 }

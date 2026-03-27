@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/michaelwinser/appbase"
+	"github.com/michaelwinser/appbase/auth"
 	"github.com/michaelwinser/appbase/examples/todo-api/api"
 	"github.com/michaelwinser/appbase/server"
 )
@@ -15,7 +16,8 @@ var _ api.ServerInterface = (*TodoServer)(nil)
 
 // TodoServer implements the generated ServerInterface.
 type TodoServer struct {
-	Store *TodoStore
+	Store  *TodoStore
+	Google *auth.GoogleAuth // nil when auth not configured (local mode)
 }
 
 func (s *TodoServer) ListTodos(w http.ResponseWriter, r *http.Request) {
