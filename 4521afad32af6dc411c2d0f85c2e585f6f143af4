@@ -1,0 +1,39 @@
+examples/todo-api/frontend/src/lib/api.ts
+  0c8409285056e801 36-43,67-80
+examples/todo-api/internal/app/gtasks.go
+  0c8409285056e801 1-193
+examples/todo-api/frontend/src/App.svelte
+  0c8409285056e801 10-11,21,72-94,142-150,277-311
+examples/todo-api/openapi.yaml
+  0c8409285056e801 71-114,147-157
+examples/todo-api/internal/app/server.go
+  0c8409285056e801 9,19-20
+examples/todo-api/main.go
+  0c8409285056e801 60,175-240
+cmd/appbase/deploy.go
+  0c8409285056e801 166
+deploy/provision.sh
+  0c8409285056e801 85
+examples/todo-api/app.yaml
+  0c8409285056e801 14-15,25-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.20",
+  "base_commit_sha": "4521afad32af6dc411c2d0f85c2e585f6f143af4",
+  "prompts": {
+    "0c8409285056e801": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f0bc80ee-12c9-4bcf-9618-5d41b2c6dfd0",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 416,
+      "total_deletions": 2,
+      "accepted_lines": 416,
+      "overriden_lines": 0
+    }
+  }
+}
