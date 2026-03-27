@@ -120,13 +120,27 @@ func New(config Config) (*App, error) {
 			if config.DB.GCPProject == "" {
 				config.DB.GCPProject = appCfg.Store.GCPProject
 			}
-			if config.GoogleAuth == nil && (appCfg.Auth.ClientID != "" || appCfg.Auth.ClientSecret != "") {
-				config.GoogleAuth = &auth.GoogleAuthConfig{
-					ClientID:     appCfg.Auth.ClientID,
-					ClientSecret: appCfg.Auth.ClientSecret,
-					RedirectURL:  appCfg.Auth.RedirectURL,
-					AllowedUsers: appCfg.Auth.AllowedUsers,
+			// Merge YAML auth config with any app-provided GoogleAuth.
+			// App-set fields take precedence; empty fields fall back to YAML.
+			// ExtraScopes are combined from both sources.
+			if appCfg.Auth.ClientID != "" || appCfg.Auth.ClientSecret != "" || len(appCfg.Auth.ExtraScopes) > 0 {
+				if config.GoogleAuth == nil {
+					config.GoogleAuth = &auth.GoogleAuthConfig{}
 				}
+				if config.GoogleAuth.ClientID == "" {
+					config.GoogleAuth.ClientID = appCfg.Auth.ClientID
+				}
+				if config.GoogleAuth.ClientSecret == "" {
+					config.GoogleAuth.ClientSecret = appCfg.Auth.ClientSecret
+				}
+				if config.GoogleAuth.RedirectURL == "" {
+					config.GoogleAuth.RedirectURL = appCfg.Auth.RedirectURL
+				}
+				if len(config.GoogleAuth.AllowedUsers) == 0 {
+					config.GoogleAuth.AllowedUsers = appCfg.Auth.AllowedUsers
+				}
+				// Append YAML scopes to any app-provided scopes
+				config.GoogleAuth.ExtraScopes = append(config.GoogleAuth.ExtraScopes, appCfg.Auth.ExtraScopes...)
 			}
 			log.Printf("Loaded config from app.yaml (env: %s)", appCfg.Env())
 		}

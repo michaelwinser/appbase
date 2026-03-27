@@ -59,6 +59,7 @@ type AuthConfig struct {
 	ClientSecret string   `yaml:"client_secret"`
 	RedirectURL  string   `yaml:"redirect_url"`
 	AllowedUsers []string `yaml:"allowed_users"`
+	ExtraScopes  []string `yaml:"extra_scopes"`
 }
 
 // EnvOverride holds per-environment config overrides.
@@ -192,6 +193,9 @@ func (c *AppConfig) applyOverride(env EnvOverride) {
 	}
 	if len(env.Auth.AllowedUsers) > 0 {
 		c.Auth.AllowedUsers = env.Auth.AllowedUsers
+	}
+	if len(env.Auth.ExtraScopes) > 0 {
+		c.Auth.ExtraScopes = env.Auth.ExtraScopes
 	}
 }
 
