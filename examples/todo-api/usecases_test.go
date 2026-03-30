@@ -4,22 +4,20 @@ import (
 	"net/http"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/michaelwinser/appbase"
-	"github.com/michaelwinser/appbase/auth"
 	"github.com/michaelwinser/appbase/examples/todo-api/api"
 	harness "github.com/michaelwinser/appbase/testing"
 )
-
-var testSessions *auth.SessionStore
 
 func setupTestApp(t *testing.T) http.Handler {
 	t.Helper()
 	os.Setenv("STORE_TYPE", "sqlite")
 	os.Setenv("SQLITE_DB_PATH", ":memory:")
+	os.Setenv("APPBASE_TEST_MODE", "true")
 	t.Cleanup(func() {
 		os.Unsetenv("SQLITE_DB_PATH")
+		os.Unsetenv("APPBASE_TEST_MODE")
 	})
 
 	a, err := appbase.New(appbase.Config{Name: "todo-api", Quiet: true})
@@ -33,11 +31,9 @@ func setupTestApp(t *testing.T) http.Handler {
 		t.Fatal(err)
 	}
 
-	// Register generated routes on the chi router
 	todoServer := &TodoServer{Store: s}
 	api.HandlerFromMux(todoServer, a.Server().Router())
 
-	testSessions = a.Sessions()
 	return a.Server().Router()
 }
 
@@ -45,11 +41,7 @@ func TestUseCases(t *testing.T) {
 	h := harness.New(t, setupTestApp)
 
 	login := func(c *harness.Client) {
-		session, err := testSessions.Create("test@example.com", "test@example.com", 1*time.Hour)
-		if err != nil {
-			t.Fatal(err)
-		}
-		c.SetCookie(auth.CookieName, session.ID)
+		c.SetHeader("X-Test-User", "test@example.com")
 	}
 
 	h.Run("UC-0001", "List todos returns empty array", func(c *harness.Client) {
@@ -85,6 +77,7 @@ func TestUseCases(t *testing.T) {
 	})
 
 	h.Run("UC-0005", "Unauthenticated request returns 401", func(c *harness.Client) {
+		// No login — no X-Test-User header
 		resp := c.GET("/api/todos")
 		c.AssertStatus(resp, 401)
 	})

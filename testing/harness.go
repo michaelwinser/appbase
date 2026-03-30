@@ -65,12 +65,22 @@ type Client struct {
 	baseURL string
 	http    *http.Client
 	cookies []*http.Cookie
+	headers map[string]string
 }
 
 // SetCookie adds a cookie to the client for subsequent requests.
 // Use this with SessionStore.Create() to simulate an authenticated user.
 func (c *Client) SetCookie(name, value string) {
 	c.cookies = append(c.cookies, &http.Cookie{Name: name, Value: value})
+}
+
+// SetHeader adds a header to the client for subsequent requests.
+// Use with APPBASE_TEST_MODE=true and X-Test-User for test authentication.
+func (c *Client) SetHeader(name, value string) {
+	if c.headers == nil {
+		c.headers = make(map[string]string)
+	}
+	c.headers[name] = value
 }
 
 // Response wraps an HTTP response with helpers.
@@ -118,6 +128,10 @@ func (c *Client) do(method, path, body string) *Response {
 	}
 	if body != "" {
 		req.Header.Set("Content-Type", "application/json")
+	}
+	// Add persistent headers (e.g., X-Test-User)
+	for k, v := range c.headers {
+		req.Header.Set(k, v)
 	}
 	// Add cookies from previous responses (session tracking)
 	for _, cookie := range c.cookies {
