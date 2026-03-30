@@ -1,0 +1,23 @@
+cli/cli.go
+  0c8409285056e801 69,71,146,148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "b0e014fe5a13f13a51dca1699bc61a67cae3a46b",
+  "prompts": {
+    "0c8409285056e801": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f0bc80ee-12c9-4bcf-9618-5d41b2c6dfd0",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 2,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    }
+  }
+}
