@@ -66,8 +66,9 @@ func New(name, description string, setupFn func() error) *CLI {
 				IsServeCommand = true
 			}
 			if !IsServeCommand {
+				localFlag, _ := cmd.Flags().GetBool("local")
 				serverFlag, _ := cmd.Flags().GetString("server")
-				if serverFlag == "" {
+				if localFlag || serverFlag == "" {
 					IsLocalMode = true
 
 					// Determine data directory for local mode
@@ -142,8 +143,9 @@ func (c *CLI) addBuiltinCommands() {
 		},
 	})
 
-	// Persistent --server flag for CLI commands that talk to the server
+	// Persistent flags for CLI commands
 	c.root.PersistentFlags().String("server", "", "Server URL (default: from keychain or http://localhost:3000)")
+	c.root.PersistentFlags().Bool("local", false, "Force local/in-process mode (ignore saved server URL)")
 	c.root.PersistentFlags().String("data", "", "Data directory (default: ~/.config/<appname>/ in local mode)")
 
 	appName := c.root.Use
