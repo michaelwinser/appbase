@@ -1,0 +1,31 @@
+examples/todo-api/sandbox
+  0c8409285056e801 1-59
+cmd/appbase/main.go
+  0c8409285056e801 54,72-81
+cmd/appbase/deploy.go
+  0c8409285056e801 18-21
+deploy/embed.go
+  0c8409285056e801 11-16
+deploy/sandbox-template.sh
+  0c8409285056e801 1-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "bd1ab5d42fe7f6f0af85517f7f2f5a5446748bef",
+  "prompts": {
+    "0c8409285056e801": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f0bc80ee-12c9-4bcf-9618-5d41b2c6dfd0",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 157,
+      "total_deletions": 0,
+      "accepted_lines": 157,
+      "overriden_lines": 0
+    }
+  }
+}
