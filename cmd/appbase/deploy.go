@@ -15,6 +15,10 @@ func deployCmd() *cobra.Command {
 		Use:   "deploy",
 		Short: "Deploy to Cloud Run",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if os.Getenv("NONO_CAP_FILE") != "" {
+				return fmt.Errorf("deploy cannot run inside a nono sandbox — cloud credentials are blocked by design.\nRun outside the sandbox: ./dev deploy")
+			}
+
 			p := mustLoadProject()
 
 			if p.GCPProject == "" {

@@ -51,6 +51,7 @@ func main() {
 	rootCmd.AddCommand(testLoginCmd())
 	rootCmd.AddCommand(testLogoutCmd())
 	rootCmd.AddCommand(devTemplateCmd())
+	rootCmd.AddCommand(sandboxTemplateCmd())
 	rootCmd.AddCommand(versionCmd())
 
 	if err := rootCmd.Execute(); err != nil {
@@ -64,6 +65,16 @@ func devTemplateCmd() *cobra.Command {
 		Short: "Print dev-template.sh to stdout (for eval in ./dev scripts)",
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Print(deploy.DevTemplate)
+		},
+	}
+}
+
+func sandboxTemplateCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "sandbox-template",
+		Short: "Print sandbox script template to stdout (for nono integration)",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Print(deploy.SandboxTemplate)
 		},
 	}
 }
