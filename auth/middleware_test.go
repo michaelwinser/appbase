@@ -248,6 +248,52 @@ func TestMiddleware_PopulatesTokenContext(t *testing.T) {
 	}
 }
 
+func TestMiddleware_TestModeHeader(t *testing.T) {
+	t.Setenv("APPBASE_TEST_MODE", "true")
+
+	_, mw := setupTestMiddleware(t)
+
+	var gotUserID string
+	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotUserID = UserID(r)
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	// X-Test-User should authenticate on protected API paths
+	req := httptest.NewRequest("GET", "/api/todos", nil)
+	req.Header.Set("X-Test-User", "testuser@example.com")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("got %d, want %d", rec.Code, http.StatusOK)
+	}
+	if gotUserID != "testuser@example.com" {
+		t.Errorf("userID = %q, want %q", gotUserID, "testuser@example.com")
+	}
+}
+
+func TestMiddleware_TestModeDisabled(t *testing.T) {
+	// Ensure test mode is off
+	t.Setenv("APPBASE_TEST_MODE", "")
+
+	_, mw := setupTestMiddleware(t)
+
+	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	// X-Test-User should be ignored when test mode is off
+	req := httptest.NewRequest("GET", "/api/todos", nil)
+	req.Header.Set("X-Test-User", "testuser@example.com")
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Errorf("got %d, want %d (test mode off, header should be ignored)", rec.Code, http.StatusUnauthorized)
+	}
+}
+
 func TestWithIdentity(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)
 	ctx := WithIdentity(req.Context(), "test-user", "test@example.com")

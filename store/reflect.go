@@ -107,6 +107,18 @@ func goTypeToSQL(t reflect.Type) string {
 	}
 }
 
+// defaultForSQL returns a SQL default value literal for the given SQL type.
+func defaultForSQL(sqlType string) string {
+	switch sqlType {
+	case "INTEGER":
+		return "0"
+	case "REAL":
+		return "0.0"
+	default:
+		return "''"
+	}
+}
+
 // getPK extracts the primary key value from an entity.
 func getPK[T any](meta *structMeta, entity *T) string {
 	v := reflect.ValueOf(entity).Elem()

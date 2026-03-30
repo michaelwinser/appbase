@@ -3,6 +3,7 @@ package store
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"reflect"
 	"strings"
 
@@ -16,12 +17,62 @@ type sqlBackend[T any] struct {
 }
 
 func (b *sqlBackend[T]) init() error {
-	return b.db.Migrate(b.generateDDL())
+	if err := b.db.Migrate(b.generateCreateTable()); err != nil {
+		return err
+	}
+	if err := b.migrateColumns(); err != nil {
+		return err
+	}
+	// Create indexes after columns are migrated (new columns may need indexes).
+	return b.createIndexes()
 }
 
-func (b *sqlBackend[T]) generateDDL() string {
-	var sb strings.Builder
+// migrateColumns adds any columns defined in the struct but missing from the table.
+// Handles the common case of adding new fields to an entity struct.
+func (b *sqlBackend[T]) migrateColumns() error {
+	rows, err := b.db.Query(fmt.Sprintf("PRAGMA table_info(%s)", b.name))
+	if err != nil {
+		return nil // non-SQLite or PRAGMA not supported — skip
+	}
+	defer rows.Close()
 
+	existing := make(map[string]bool)
+	for rows.Next() {
+		var cid int
+		var name, colType string
+		var notNull, pk int
+		var dflt *string
+		if err := rows.Scan(&cid, &name, &colType, &notNull, &dflt, &pk); err != nil {
+			continue
+		}
+		existing[name] = true
+	}
+
+	for _, fi := range b.meta.Fields {
+		if existing[fi.Column] {
+			continue
+		}
+		sqlType := goTypeToSQL(fi.GoType)
+		dflt := defaultForSQL(sqlType)
+		stmt := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s NOT NULL DEFAULT %s",
+			b.name, fi.Column, sqlType, dflt)
+		if _, err := b.db.Exec(stmt); err != nil {
+			return fmt.Errorf("auto-migrate %s.%s: %w", b.name, fi.Column, err)
+		}
+		log.Printf("store: %s — added column %s %s", b.name, fi.Column, sqlType)
+
+		// Create index if tagged
+		if fi.HasIndex {
+			idxStmt := fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_%s_%s ON %s(%s)",
+				b.name, fi.Column, b.name, fi.Column)
+			b.db.Exec(idxStmt) // best-effort
+		}
+	}
+	return nil
+}
+
+func (b *sqlBackend[T]) generateCreateTable() string {
+	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("CREATE TABLE IF NOT EXISTS %s (\n", b.name))
 	for i, fi := range b.meta.Fields {
 		sqlType := goTypeToSQL(fi.GoType)
@@ -37,15 +88,20 @@ func (b *sqlBackend[T]) generateDDL() string {
 		sb.WriteString("\n")
 	}
 	sb.WriteString(");\n")
+	return sb.String()
+}
 
+func (b *sqlBackend[T]) createIndexes() error {
 	for _, fi := range b.meta.Fields {
 		if fi.HasIndex {
-			sb.WriteString(fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_%s_%s ON %s(%s);\n",
-				b.name, fi.Column, b.name, fi.Column))
+			stmt := fmt.Sprintf("CREATE INDEX IF NOT EXISTS idx_%s_%s ON %s(%s)",
+				b.name, fi.Column, b.name, fi.Column)
+			if _, err := b.db.Exec(stmt); err != nil {
+				return fmt.Errorf("creating index on %s.%s: %w", b.name, fi.Column, err)
+			}
 		}
 	}
-
-	return sb.String()
+	return nil
 }
 
 func (b *sqlBackend[T]) get(id string) (*T, error) {

@@ -296,6 +296,78 @@ func TestInvalidCollectionName(t *testing.T) {
 	}
 }
 
+// testItemV2 has an extra field compared to testItem, simulating a schema evolution.
+type testItemV2 struct {
+	ID       string `store:"id,pk"`
+	Owner    string `store:"owner,index"`
+	Name     string `store:"name"`
+	Count    int    `store:"count"`
+	Active   bool   `store:"active"`
+	Priority int    `store:"priority,index"` // new field
+	Notes    string `store:"notes"`          // new field
+}
+
+func TestAutoMigrateColumns(t *testing.T) {
+	db := testDB(t)
+
+	// Create table with the original schema (v1)
+	coll1, err := NewCollection[testItem](db, "evolving")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Insert a row with v1 schema
+	if err := coll1.Create(&testItem{ID: "1", Owner: "alice", Name: "old", Count: 1, Active: true}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Now open the same table with v2 schema — should auto-add missing columns
+	coll2, err := NewCollection[testItemV2](db, "evolving")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Read the old row — new fields should have defaults
+	got, err := coll2.Get("1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got == nil {
+		t.Fatal("expected item, got nil")
+	}
+	if got.Name != "old" {
+		t.Fatalf("expected Name=old, got %s", got.Name)
+	}
+	if got.Priority != 0 {
+		t.Fatalf("expected Priority=0 (default), got %d", got.Priority)
+	}
+	if got.Notes != "" {
+		t.Fatalf("expected Notes='' (default), got %q", got.Notes)
+	}
+
+	// Insert a new row with the new fields populated
+	if err := coll2.Create(&testItemV2{ID: "2", Owner: "bob", Name: "new", Priority: 5, Notes: "hi"}); err != nil {
+		t.Fatal(err)
+	}
+
+	got2, _ := coll2.Get("2")
+	if got2.Priority != 5 {
+		t.Fatalf("expected Priority=5, got %d", got2.Priority)
+	}
+	if got2.Notes != "hi" {
+		t.Fatalf("expected Notes=hi, got %q", got2.Notes)
+	}
+
+	// Query by the new indexed column
+	items, err := coll2.Where("priority", "==", 5).All()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].ID != "2" {
+		t.Fatalf("expected 1 item with ID=2, got %d items", len(items))
+	}
+}
+
 func TestQueryImmutable(t *testing.T) {
 	coll := testCollection(t)
 

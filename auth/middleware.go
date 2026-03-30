@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 )
@@ -68,12 +69,25 @@ func TokenExpiry(r *http.Request) time.Time {
 	return time.Time{}
 }
 
+// TestMode returns true when APPBASE_TEST_MODE=true, enabling X-Test-User
+// header authentication for CI and API-level testing.
+func TestMode() bool {
+	return os.Getenv("APPBASE_TEST_MODE") == "true"
+}
+
 // Middleware returns HTTP middleware that enforces session authentication.
 // It always populates user context from the session cookie if valid.
 // For non-exempt API paths, it rejects requests without a valid session.
+//
+// When APPBASE_TEST_MODE=true, also accepts X-Test-User header as identity.
 func Middleware(sessions *SessionStore, exemptPrefixes []string) func(http.Handler) http.Handler {
 	if exemptPrefixes == nil {
 		exemptPrefixes = []string{"/api/auth/", "/health"}
+	}
+
+	testMode := TestMode()
+	if testMode {
+		log.Println("WARNING: test authentication enabled (APPBASE_TEST_MODE=true)")
 	}
 
 	isExempt := func(path string) bool {
@@ -90,6 +104,16 @@ func Middleware(sessions *SessionStore, exemptPrefixes []string) func(http.Handl
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Test mode: accept X-Test-User header as identity
+			if testMode {
+				if testUser := r.Header.Get("X-Test-User"); testUser != "" {
+					ctx := WithIdentity(r.Context(), testUser, testUser)
+					r = r.WithContext(ctx)
+					next.ServeHTTP(w, r)
+					return
+				}
+			}
+
 			// Always try to populate context from session cookie
 			if cookie, err := r.Cookie(CookieName); err == nil && cookie.Value != "" {
 				session, err := sessions.Get(cookie.Value)
