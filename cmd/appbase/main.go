@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/michaelwinser/appbase/deploy"
 	"github.com/spf13/cobra"
 )
 
@@ -49,10 +50,21 @@ func main() {
 	rootCmd.AddCommand(testSessionCmd())
 	rootCmd.AddCommand(testLoginCmd())
 	rootCmd.AddCommand(testLogoutCmd())
+	rootCmd.AddCommand(devTemplateCmd())
 	rootCmd.AddCommand(versionCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
+	}
+}
+
+func devTemplateCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "dev-template",
+		Short: "Print dev-template.sh to stdout (for eval in ./dev scripts)",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Print(deploy.DevTemplate)
+		},
 	}
 }
 

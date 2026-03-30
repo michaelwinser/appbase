@@ -5,8 +5,8 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# Source shared dev functions
-. "../../deploy/dev-template.sh"
+# Source shared dev functions (embedded in the appbase binary)
+eval "$(appbase dev-template)"
 
 # App-specific settings
 APP_BINARY_NAME="todo-api"
