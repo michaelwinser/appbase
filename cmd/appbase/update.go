@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
+	"github.com/michaelwinser/appbase/deploy"
 	"github.com/spf13/cobra"
 )
 
@@ -53,7 +55,13 @@ func updateCmd() *cobra.Command {
 				suggestions++
 			}
 
-			// 5. Detect outdated code patterns
+			// 5. Update Claude Code skills
+			if result := updateSkills(dryRun); result != "" {
+				fmt.Println(result)
+				updated++
+			}
+
+			// 6. Detect outdated code patterns
 			patterns := detectOutdatedPatterns()
 			for _, p := range patterns {
 				fmt.Printf("  suggest: %s\n", p)
@@ -162,6 +170,53 @@ func checkSandbox(dryRun bool) string {
 	}
 	return "  suggest: no ./sandbox script found.\n" +
 		"           Create one: appbase sandbox-template > sandbox && chmod +x sandbox"
+}
+
+func updateSkills(dryRun bool) string {
+	skills := deploy.ConsumerSkills()
+	if len(skills) == 0 {
+		return ""
+	}
+
+	skillsDir := filepath.Join(".claude", "skills")
+	wrote := 0
+	skipped := 0
+
+	for name, content := range skills {
+		path := filepath.Join(skillsDir, name)
+
+		// Check if already up to date
+		existing, err := os.ReadFile(path)
+		if err == nil && string(existing) == content {
+			skipped++
+			continue
+		}
+
+		if dryRun {
+			if err != nil {
+				fmt.Printf("  would add: %s\n", path)
+			} else {
+				fmt.Printf("  would update: %s\n", path)
+			}
+			wrote++
+			continue
+		}
+
+		os.MkdirAll(skillsDir, 0755)
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			fmt.Printf("  error writing %s: %v\n", path, err)
+			continue
+		}
+		wrote++
+	}
+
+	if wrote == 0 {
+		return ""
+	}
+	if dryRun {
+		return fmt.Sprintf("  would update %d Claude Code skills in %s", wrote, skillsDir)
+	}
+	return fmt.Sprintf("  updated: %d Claude Code skills in %s", wrote, skillsDir)
 }
 
 func detectOutdatedPatterns() []string {
