@@ -184,6 +184,20 @@ func provisionCmd() *cobra.Command {
 				"--project="+p.GCPProject, "--repository-format=docker",
 				"--location="+p.Region, "--description=Cloud Run source deploy images").Run()
 
+			// Grant Secret Manager access to Cloud Run service account
+			fmt.Println("  Granting Secret Manager access to Cloud Run...")
+			projNum, _ := exec.Command("gcloud", "projects", "describe", p.GCPProject,
+				"--format=value(projectNumber)").Output()
+			if num := strings.TrimSpace(string(projNum)); num != "" {
+				sa := num + "-compute@developer.gserviceaccount.com"
+				exec.Command("gcloud", "projects", "add-iam-policy-binding", p.GCPProject,
+					"--member=serviceAccount:"+sa,
+					"--role=roles/secretmanager.secretAccessor",
+					"--condition=None",
+					"--quiet").Run()
+				fmt.Printf("  Granted secretmanager.secretAccessor to %s\n", sa)
+			}
+
 			// 5. OAuth
 			fmt.Println("\n[5/5] OAuth")
 			fmt.Println("  Configuring consent screen...")

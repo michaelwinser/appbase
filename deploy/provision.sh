@@ -118,6 +118,18 @@ provision_resources() {
         --location="$region" \
         --description="Cloud Run source deploy images" 2>/dev/null || echo "  (Repository already exists)"
 
+    echo "  Granting Secret Manager access to Cloud Run service account..."
+    _project_number=$(gcloud projects describe "$project" --format="value(projectNumber)" 2>/dev/null || true)
+    if [ -n "$_project_number" ]; then
+        _sa="${_project_number}-compute@developer.gserviceaccount.com"
+        gcloud projects add-iam-policy-binding "$project" \
+            --member="serviceAccount:$_sa" \
+            --role="roles/secretmanager.secretAccessor" \
+            --condition=None \
+            --quiet 2>/dev/null || echo "  (Binding may already exist)"
+        echo "  Granted secretmanager.secretAccessor to $_sa"
+    fi
+
     echo "  Resources created."
 }
 
