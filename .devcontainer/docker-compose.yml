@@ -17,7 +17,7 @@ services:
       - go-mod-cache:/go/pkg/mod
       - go-build-cache:/root/.cache/go-build
     environment:
-      - CGO_ENABLED=1
+      - CGO_ENABLED=0
     command: sleep infinity
 
   # Frontend tooling — Node, pnpm, codegen

@@ -158,16 +158,15 @@ func provisionCmd() *cobra.Command {
 				fmt.Println("  WARNING: No billing linked. Link manually or pass a billing account.")
 			}
 
-			// 3. APIs
+			// 3. APIs — only enable what appbase infrastructure needs.
+			// App-specific APIs (Tasks, Calendar, etc.) are the app's responsibility.
 			fmt.Println("\n[3/5] APIs")
 			apis := []string{
-				"cloudbuild.googleapis.com",
-				"run.googleapis.com",
-				"firestore.googleapis.com",
-				"artifactregistry.googleapis.com",
-				"secretmanager.googleapis.com",
-				"iap.googleapis.com",
-				"tasks.googleapis.com",
+				"cloudbuild.googleapis.com",       // Cloud Build (source deploy)
+				"run.googleapis.com",              // Cloud Run
+				"firestore.googleapis.com",        // Firestore database
+				"artifactregistry.googleapis.com", // Container image registry
+				"secretmanager.googleapis.com",    // Secret storage
 			}
 			for _, api := range apis {
 				fmt.Printf("  Enabling %s...\n", api)

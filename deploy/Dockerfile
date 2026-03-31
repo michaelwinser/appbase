@@ -14,9 +14,7 @@
 # --- Build stage ---
 FROM golang:1.24-alpine AS builder
 
-RUN apk add --no-cache gcc musl-dev git
-
-ENV CGO_ENABLED=1
+RUN apk add --no-cache git
 
 WORKDIR /build
 
@@ -25,14 +23,15 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 # Build — change this path to your app's main package
+# CGO_ENABLED=0: appbase uses modernc.org/sqlite (pure Go, no CGO needed)
 ARG APP_PKG=./examples/todo
 COPY . .
-RUN go build -o /out/server ${APP_PKG}
+RUN CGO_ENABLED=0 go build -o /out/server ${APP_PKG}
 
 # --- Runtime stage ---
 FROM alpine:3.21
 
-RUN apk add --no-cache ca-certificates sqlite
+RUN apk add --no-cache ca-certificates
 
 WORKDIR /app
 

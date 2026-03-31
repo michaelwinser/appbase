@@ -75,14 +75,14 @@ provision_apis() {
 
     echo "Enabling APIs for $project..."
 
+    # Only enable what appbase infrastructure needs.
+    # App-specific APIs (Tasks, Calendar, etc.) are the app's responsibility.
     apis="
         cloudbuild.googleapis.com
         run.googleapis.com
         firestore.googleapis.com
         artifactregistry.googleapis.com
         secretmanager.googleapis.com
-        iap.googleapis.com
-        tasks.googleapis.com
     "
 
     for api in $apis; do
