@@ -1,0 +1,25 @@
+deploy/provision.sh
+  0c8409285056e801 121-132
+cmd/appbase/deploy.go
+  0c8409285056e801 187-200
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.23",
+  "base_commit_sha": "cacc19e62366913c124bf754b3c3872b1fb9c1c0",
+  "prompts": {
+    "0c8409285056e801": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f0bc80ee-12c9-4bcf-9618-5d41b2c6dfd0",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 26,
+      "total_deletions": 0,
+      "accepted_lines": 26,
+      "overriden_lines": 0
+    }
+  }
+}
