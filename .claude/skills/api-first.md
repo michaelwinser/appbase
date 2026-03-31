@@ -69,33 +69,35 @@ listCmd := &cobra.Command{
     Use:   "list",
     Short: "List things (via API)",
     RunE: func(cmd *cobra.Command, args []string) error {
-        // Auto-serve: starts ephemeral server if no --server flag
-        serverURL, cleanup, _ := appcli.ResolveServerWithAutoServe(cmd, appName)
+        if err := setup(); err != nil {
+            return err
+        }
+        httpClient, baseURL, cleanup, err := appcli.ClientForCommand(cmd, "myapp", app.Handler())
+        if err != nil {
+            return err
+        }
         defer cleanup()
 
-        // Local mode: falls back to plain client (dev auth handles it)
-        httpClient, err := appcli.AuthenticatedClient(appName)
-        if err != nil {
-            httpClient = http.DefaultClient
-        }
-
-        client, _ := api.NewClientWithResponses(serverURL, api.WithHTTPClient(httpClient))
-        resp, err := client.ListThingsWithResponse(ctx)
+        client, _ := api.NewClientWithResponses(baseURL, api.WithHTTPClient(httpClient))
+        resp, err := client.ListThingsWithResponse(context.Background())
         // ...
     },
 }
 ```
 
 **Three modes — no code changes needed:**
-- `myapp list` — local: auto-serve + dev auth, no setup
-- `myapp list --server http://localhost:3000` — uses running server
-- `myapp list --server https://prod.app` — remote, needs `myapp login` first
+- `myapp list` — local: in-process transport, no server needed
+- `myapp --server http://localhost:3000 list` — uses running server
+- `myapp --server https://prod.app list` — remote, needs `myapp login` first
+- `myapp --local list` — force local mode (ignores saved server URL)
 
 ### 6. Write a use case test
 
+Use `APPBASE_TEST_MODE=true` and `X-Test-User` header — no session setup needed:
+
 ```go
 h.Run("UC-XXXX", "List things", func(c *harness.Client) {
-    login(c)
+    c.SetHeader("X-Test-User", "test@example.com")
     resp := c.GET("/api/things")
     c.AssertStatus(resp, 200)
 })

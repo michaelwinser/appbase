@@ -10,19 +10,21 @@ trigger: When the user wants to create a new app built on the appbase module
 
 ```
 myapp/
-├── CLAUDE.md              # AI session instructions (devcontainer rules, patterns)
+├── CLAUDE.md              # AI session instructions
+├── .mise.toml             # Toolchain (Go, Node, pnpm)
 ├── app.yaml               # App config (name, port, environments, secrets)
 ├── app.json               # Deploy script compat (name, gcpProject, region)
 ├── go.mod                 # Depends on github.com/michaelwinser/appbase
 ├── openapi.yaml           # API spec (source of truth)
 ├── main.go                # Server + CLI entry point
+├── store.go               # Re-exports from internal/app
 ├── internal/app/          # Shared code (imported by both server and desktop)
 │   ├── store.go           # Entity store (store.Collection)
 │   └── server.go          # Implements api.ServerInterface
 ├── api/                   # Generated from openapi.yaml
 │   ├── server.gen.go
 │   └── client.gen.go
-├── frontend/              # Svelte app (built in devcontainer)
+├── frontend/              # Svelte app
 │   ├── package.json
 │   ├── src/
 │   │   ├── App.svelte
@@ -30,15 +32,10 @@ myapp/
 │   │       ├── api.ts           # Typed fetch wrappers
 │   │       └── api-types.ts     # Generated from openapi.yaml
 │   └── dist/              # Embedded in Go binary
-├── .devcontainer/         # Frontend tooling container
-│   └── Dockerfile.frontend
 ├── cmd/desktop/           # Wails desktop entry point (optional)
 ├── usecases_test.go       # Use case tests (UC-XXXX)
-├── e2e/                   # Shell-based E2E tests
-├── deploy/
-│   ├── Dockerfile
-│   └── docker-compose.yml
-├── dev                    # Project command script (sources dev-template.sh)
+├── dev                    # Project command script
+├── sandbox                # nono sandbox for AI sessions
 └── .claude/
     └── settings.local.json
 ```
@@ -50,60 +47,83 @@ myapp/
 ```bash
 mkdir myapp && cd myapp
 go mod init github.com/michaelwinser/myapp
-go get github.com/michaelwinser/appbase
+go get github.com/michaelwinser/appbase@latest
 ```
 
-### 2. Create CLAUDE.md
+### 2. Create .mise.toml
 
-**This is critical.** The per-app CLAUDE.md ensures AI sessions follow the right patterns.
+```toml
+[tools]
+node = "22"
+"npm:pnpm" = "9"
+```
+
+Then `mise install` to get the toolchain. Go and codegen tools inherit from the parent appbase `.mise.toml` if this is a sibling project, or add them explicitly:
+
+```toml
+[tools]
+go = "1.25"
+node = "22"
+"npm:pnpm" = "9"
+"go:github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen" = "latest"
+```
+
+### 3. Create CLAUDE.md
 
 ```markdown
 # myapp
 
-An appbase application. See `../appbase/CLAUDE.md` for the full framework reference.
+An appbase application. See the appbase README for framework reference.
 
-## Development Tooling
+## Development
 
-**Do not install Node.js, npm, pnpm, or frontend build tools on the host.**
-All frontend tooling runs inside the project's devcontainer.
+All tasks go through `./dev`:
+- `./dev serve` — Start web server
+- `./dev build` — Build binary
+- `./dev test` — Run tests
+- `./dev codegen` — Generate server/client + frontend types from openapi.yaml
 
-### Commands
+## Frontend
 
-All development tasks go through `./dev`:
-
-- `./dev codegen` — Generate Go server/client + frontend TypeScript types
-- `./dev serve` — Start the web server
-- `./dev test` — Run Go tests
-- `./dev build` — Build the binary
-
-### Frontend work
-
-Never run `npm`, `npx`, `pnpm`, or `yarn` directly. Use:
-- `./dev codegen` — Regenerate frontend types from openapi.yaml
-- `./dev frontend install` — Install frontend dependencies
-- `./dev frontend build` — Build the frontend
-- `./dev frontend <cmd>` — Run any command in the frontend devcontainer
-
-The devcontainer starts automatically when needed and stops after the command completes.
-
-### Devcontainer
-
-The project has a `.devcontainer/Dockerfile.frontend` for frontend tooling.
-To add a new tool, add it to that Dockerfile — do not install globally or on the host.
+Uses mise for toolchain (`mise install`). Run `pnpm` commands via `./dev frontend <cmd>` or directly after `mise install`.
 
 ## Architecture
 
-- **Config:** `appbase.Config{LocalMode: appcli.IsLocalMode}` for CLI, `LocalMode: true` for desktop
-- **CLI commands:** Use `appcli.ClientForCommand(cmd, "myapp", app.Handler())` for API access
-- **DB path:** `cfg.DB.SQLitePath = appcli.LocalDataPath + "/app.db"` in setup()
-- **Direct store access:** Use `appcli.LocalUserID()` for user identity, not `"cli-user"`
-- **Frontend types:** Generated from openapi.yaml — don't hand-write TypeScript interfaces for API types
-- **Desktop:** Use `app.LocalHandler()` with Wails, not `app.Handler()`
-
-See `../appbase/docs/migration-local-mode.md` for the full pattern reference.
+- **Config:** `appbase.Config{LocalMode: appcli.IsLocalMode}` for CLI
+- **CLI commands:** Use `appcli.ClientForCommand(cmd, "myapp", app.Handler())`
+- **Auth in handlers:** `appbase.UserID(r)`, `appbase.Email(r)`
+- **Testing:** Set `APPBASE_TEST_MODE=true`, use `X-Test-User` header
+- **Desktop:** Use `app.LocalHandler()` with Wails
 ```
 
-### 3. Create app.json
+### 4. Create app.yaml
+
+```yaml
+name: myapp
+port: 3000
+
+store:
+  type: sqlite
+  path: data/app.db
+
+environments:
+  local:
+    url: http://localhost:3000
+    auth:
+      client_id: ${secret:google-client-id}
+      client_secret: ${secret:google-client-secret}
+
+  production:
+    url: https://myapp.run.app
+    store:
+      type: firestore
+      gcp_project: my-gcp-project
+    auth:
+      client_id: ${secret:google-client-id}
+      client_secret: ${secret:google-client-secret}
+```
+
+### 5. Create app.json
 
 ```json
 {
@@ -113,7 +133,7 @@ See `../appbase/docs/migration-local-mode.md` for the full pattern reference.
 }
 ```
 
-### 4. Create main.go
+### 6. Create main.go
 
 ```go
 package main
@@ -159,10 +179,8 @@ func setup() error {
         return err
     }
 
-    // Register API routes
     thingServer := &ThingServer{Store: thingStore}
     api.HandlerFromMux(thingServer, app.Server().Router())
-
     return nil
 }
 
@@ -211,7 +229,7 @@ func main() {
 }
 ```
 
-### 5. Create the store
+### 7. Create the store
 
 Use `store.Collection[T]` for automatic SQL/Firestore dual-backend:
 
@@ -227,22 +245,7 @@ type ThingEntity struct {
 
 See `examples/todo-api/internal/app/store.go` for the complete pattern.
 
-### 6. Create the devcontainer
-
-```dockerfile
-# .devcontainer/Dockerfile.frontend
-FROM node:20-alpine
-ENV PNPM_HOME="/root/.local/share/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable && corepack prepare pnpm@latest --activate
-RUN pnpm add -g openapi-typescript
-RUN apk add --no-cache curl git bash
-WORKDIR /app
-```
-
-This is the appbase base pattern. Add app-specific tools (e.g., Tailwind, additional codegen) to this file.
-
-### 7. Create the `./dev` script
+### 8. Create the `./dev` script
 
 ```sh
 #!/bin/sh
@@ -250,8 +253,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# Source shared dev functions from appbase
-. "../appbase/deploy/dev-template.sh"
+eval "$(appbase dev-template)"
 
 APP_BINARY_NAME="myapp"
 
@@ -260,20 +262,56 @@ case "${1:-help}" in
 esac
 ```
 
-Make it executable: `chmod +x dev`
+Make executable: `chmod +x dev`
 
-### 8. Create the frontend
+### 9. Create the `./sandbox` script
 
-Initialize in the devcontainer:
+```sh
+appbase sandbox-template > sandbox
+chmod +x sandbox
+# Edit: add --allow and --allow-bind for your project
+```
+
+### 10. Create the frontend
+
 ```bash
-./dev frontend "pnpm create vite frontend --template svelte-ts"
-./dev frontend "cd frontend && pnpm install"
+pnpm create vite frontend --template svelte-ts
+cd frontend && pnpm install
 ```
 
 Add the API client pattern — see `examples/todo-api/frontend/src/lib/api.ts`.
-Run `./dev codegen` to generate `api-types.ts` from `openapi.yaml`.
+Run `./dev codegen` to generate TypeScript types from `openapi.yaml`.
 
-### 9. Configure Claude Code permissions
+### 11. Create use case tests
+
+```go
+func setupTestApp(t *testing.T) http.Handler {
+    os.Setenv("STORE_TYPE", "sqlite")
+    os.Setenv("SQLITE_DB_PATH", ":memory:")
+    os.Setenv("APPBASE_TEST_MODE", "true")
+
+    a, _ := appbase.New(appbase.Config{Name: "myapp", Quiet: true})
+    t.Cleanup(func() { a.Close() })
+
+    s, _ := NewThingStore(a.DB())
+    server := &ThingServer{Store: s}
+    api.HandlerFromMux(server, a.Server().Router())
+    return a.Server().Router()
+}
+
+func TestUseCases(t *testing.T) {
+    h := harness.New(t, setupTestApp)
+
+    h.Run("UC-001", "List returns empty", func(c *harness.Client) {
+        c.SetHeader("X-Test-User", "test@example.com")
+        resp := c.GET("/api/things")
+        c.AssertStatus(resp, 200)
+        c.AssertJSONArray(resp, 0)
+    })
+}
+```
+
+### 12. Configure Claude Code permissions
 
 Create `.claude/settings.local.json`:
 
@@ -283,20 +321,21 @@ Create `.claude/settings.local.json`:
     "allow": [
       "Bash(go:*)", "Bash(git:*)", "Bash(sh:*)",
       "Bash(appbase:*)", "Bash(docker:*)",
-      "Bash(gh:*)", "Bash(./dev:*)"
+      "Bash(gh:*)", "Bash(./dev:*)", "Bash(pnpm:*)"
     ]
   }
 }
 ```
 
-### 10. Verify
+### 13. Verify
 
 ```bash
 go build ./...
 go test -v ./...
-go run . serve    # Server at localhost:3000
-go run . list     # CLI local mode
-./dev codegen     # Go + frontend types
+./dev serve              # Server at localhost:3000
+myapp list               # CLI local mode
+myapp --local list       # Force local mode
+./dev codegen            # Go + frontend types
 ```
 
 ## Choosing a Pattern
@@ -307,14 +346,13 @@ go run . list     # CLI local mode
 | **Hand-written routes** | Simple apps, internal tools, prototypes | `examples/todo-store/` |
 | **Desktop (Wails)** | Native desktop app, same API | `examples/todo-api/DESKTOP.md` |
 
-For API-first apps, see the `api-first` skill for the full workflow.
-
 ## Key Patterns
 
-- **Three runtime modes** — local CLI (in-process transport), web server (full OAuth), remote CLI (keychain session)
-- **In-process transport** — CLI commands call the handler directly via `ClientForCommand`, no TCP
-- **Login page is built-in** — `app.LoginPage(handler)` shows Google sign-in. Skipped in LocalMode.
-- **CLI uses the API** — CLI commands use the generated HTTP client via `ClientForCommand`
-- **Desktop via LocalHandler()** — use `app.LocalHandler()` with Wails for native desktop apps
-- **Frontend types from spec** — `./dev codegen` generates both Go and TypeScript from `openapi.yaml`
-- **Devcontainer for frontend** — all Node/pnpm/vite runs in the container, never on the host
+- **Three runtime modes** — local CLI (in-process), web server (OAuth), remote CLI (keychain session)
+- **In-process transport** — CLI commands call the handler directly, no TCP
+- **Login page is built-in** — `app.LoginPage(handler)` shows Google sign-in
+- **CLI uses the API** — generated HTTP client via `ClientForCommand`
+- **Desktop via LocalHandler()** — `app.LocalHandler()` with Wails
+- **Frontend types from spec** — `./dev codegen` generates Go + TypeScript
+- **Test auth** — `APPBASE_TEST_MODE=true` + `X-Test-User` header
+- **`--local` flag** — force local mode, ignore saved server URLs
