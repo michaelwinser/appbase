@@ -38,6 +38,7 @@ type AppConfig struct {
 
 	Store StoreConfig `yaml:"store"`
 	Auth  AuthConfig  `yaml:"auth"`
+	GCP   GCPConfig   `yaml:"gcp"`
 
 	Environments map[string]EnvOverride `yaml:"environments"`
 
@@ -51,6 +52,13 @@ type StoreConfig struct {
 	Type       string `yaml:"type"`
 	Path       string `yaml:"path"`
 	GCPProject string `yaml:"gcp_project"`
+}
+
+// GCPConfig holds GCP-specific configuration.
+type GCPConfig struct {
+	// APIs lists additional GCP APIs the app needs enabled during provisioning.
+	// Infrastructure APIs (Cloud Run, Firestore, etc.) are always enabled.
+	APIs []string `yaml:"apis"`
 }
 
 // AuthConfig holds authentication configuration.

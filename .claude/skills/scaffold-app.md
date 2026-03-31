@@ -106,12 +106,19 @@ store:
   type: sqlite
   path: data/app.db
 
+# Uncomment to enable app-specific GCP APIs during provisioning:
+# gcp:
+#   apis:
+#     - tasks.googleapis.com
+
 environments:
   local:
     url: http://localhost:3000
     auth:
       client_id: ${secret:google-client-id}
       client_secret: ${secret:google-client-secret}
+      # extra_scopes:
+      #   - https://www.googleapis.com/auth/tasks
 
   production:
     url: https://myapp.run.app

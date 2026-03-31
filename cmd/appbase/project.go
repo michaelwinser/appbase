@@ -16,6 +16,7 @@ type project struct {
 	Region     string
 	Port       int
 	URLs       []string
+	GCPAPIs    []string // additional GCP APIs from app.yaml gcp.apis
 }
 
 // loadProject reads project config from cwd.
@@ -52,6 +53,9 @@ func loadFromYAML(path string) (*project, error) {
 		Store struct {
 			GCPProject string `yaml:"gcp_project"`
 		} `yaml:"store"`
+		GCP struct {
+			APIs []string `yaml:"apis"`
+		} `yaml:"gcp"`
 		Environments map[string]struct {
 			URL   string `yaml:"url"`
 			Store struct {
@@ -88,6 +92,7 @@ func loadFromYAML(path string) (*project, error) {
 	if p.Region == "" {
 		p.Region = "us-central1"
 	}
+	p.GCPAPIs = cfg.GCP.APIs
 	return p, nil
 }
 

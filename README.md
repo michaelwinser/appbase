@@ -131,15 +131,19 @@ email := appbase.Email(r)
 token := appbase.AccessToken(r)  // OAuth token for Google API calls
 ```
 
-For apps that need Google API access (Tasks, Calendar, Drive), add scopes in `app.yaml`:
+For apps that need Google API access (Tasks, Calendar, Drive), add scopes and the required GCP API in `app.yaml`:
 
 ```yaml
 auth:
-  client_id: ${secret:google-client-id}
-  client_secret: ${secret:google-client-secret}
   extra_scopes:
     - https://www.googleapis.com/auth/tasks
+
+gcp:
+  apis:
+    - tasks.googleapis.com
 ```
+
+The `extra_scopes` are requested during OAuth login. The `gcp.apis` are enabled by `./dev provision`.
 
 ## CLI commands
 
@@ -219,6 +223,8 @@ appbase sandbox-template   # generate a starter sandbox script
 ./dev secret import creds.json     # OAuth credentials to keychain
 ./dev deploy                       # Cloud Run deployment
 ```
+
+Provisioning enables 5 infrastructure APIs automatically. App-specific APIs (Tasks, Calendar, etc.) are declared in `app.yaml` under `gcp.apis` and enabled alongside them.
 
 Secrets flow: OS keychain (local) -> GCP Secret Manager (Cloud Run). Never stored as plaintext on disk.
 

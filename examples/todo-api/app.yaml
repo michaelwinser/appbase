@@ -5,6 +5,10 @@ store:
   type: sqlite
   path: data/app.db
 
+gcp:
+  apis:
+    - tasks.googleapis.com
+
 environments:
   local:
     url: http://localhost:3000
