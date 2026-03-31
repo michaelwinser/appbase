@@ -1,0 +1,7 @@
+# Toolchain for todo-api development.
+# Run `mise install` to set up all tools.
+# Inherits from the parent .mise.toml for Go and codegen tools.
+
+[tools]
+node = "22"
+"npm:pnpm" = "9"

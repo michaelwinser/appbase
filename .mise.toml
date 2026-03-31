@@ -1,0 +1,10 @@
+# Toolchain for appbase development.
+# Run `mise install` to set up all tools.
+# See: https://mise.jdx.dev
+
+[tools]
+go = "1.25"
+node = "22"
+"npm:pnpm" = "9"
+"go:github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen" = "latest"
+"go:github.com/wailsapp/wails/v2/cmd/wails" = "latest"
