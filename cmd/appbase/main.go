@@ -50,6 +50,7 @@ func main() {
 	rootCmd.AddCommand(testSessionCmd())
 	rootCmd.AddCommand(testLoginCmd())
 	rootCmd.AddCommand(testLogoutCmd())
+	rootCmd.AddCommand(updateCmd())
 	rootCmd.AddCommand(devTemplateCmd())
 	rootCmd.AddCommand(sandboxTemplateCmd())
 	rootCmd.AddCommand(versionCmd())
