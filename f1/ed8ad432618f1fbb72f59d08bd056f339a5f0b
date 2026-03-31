@@ -1,0 +1,29 @@
+.claude/skills/api-first.md
+  0c8409285056e801 72-75,77,79,81-82,89-92,96-97,100
+.claude/skills/scaffold-app.md
+  0c8409285056e801 13-14,20,27,37-38,50,53,55-59,61,63-69,71,73-74,76,78,80-84,86,88,92-96,99-123,126,136,232,248,256,265,267,269-273,275,278-279,283-285,287-300,302-312,314,324,330,335-338,351-358
+README.md
+  0c8409285056e801 1-258
+.claude/skills/add-entity.md
+  0c8409285056e801 9,13,16-23,27-32,34,38,41-44,46,49-50,53-54,57-58,61,67-68,71-72,75-76,80-115,117,119-121,123,125,127-130,132-133,135-136,140,143-156,159,162-164,166,170,172-183,190,193-197,199-200,202-210,218-219
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.23",
+  "base_commit_sha": "f1ed8ad432618f1fbb72f59d08bd056f339a5f0b",
+  "prompts": {
+    "0c8409285056e801": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f0bc80ee-12c9-4bcf-9618-5d41b2c6dfd0",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 544,
+      "total_deletions": 377,
+      "accepted_lines": 544,
+      "overriden_lines": 0
+    }
+  }
+}
