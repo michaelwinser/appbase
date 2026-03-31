@@ -1,0 +1,25 @@
+cmd/appbase/update.go
+  0c8409285056e801 1-228
+cmd/appbase/main.go
+  0c8409285056e801 53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.23",
+  "base_commit_sha": "a9f32ce09bd2fa427c2bf0ad03a2829d0728d5e2",
+  "prompts": {
+    "0c8409285056e801": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f0bc80ee-12c9-4bcf-9618-5d41b2c6dfd0",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 230,
+      "total_deletions": 1,
+      "accepted_lines": 229,
+      "overriden_lines": 0
+    }
+  }
+}
