@@ -1,0 +1,25 @@
+examples/todo-api/.mise.toml
+  0c8409285056e801 1-7
+.mise.toml
+  0c8409285056e801 1-10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.22",
+  "base_commit_sha": "644d31475ef2b5531fb13eb6d08a5b320e7db620",
+  "prompts": {
+    "0c8409285056e801": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f0bc80ee-12c9-4bcf-9618-5d41b2c6dfd0",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser <github.com@public.winser.com>",
+      "messages": [],
+      "total_additions": 17,
+      "total_deletions": 0,
+      "accepted_lines": 17,
+      "overriden_lines": 0
+    }
+  }
+}
