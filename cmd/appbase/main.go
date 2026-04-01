@@ -21,6 +21,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime/debug"
 
 	"github.com/michaelwinser/appbase/deploy"
 	"github.com/spf13/cobra"
@@ -85,7 +86,11 @@ func versionCmd() *cobra.Command {
 		Use:   "version",
 		Short: "Print appbase version",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println("appbase CLI v0.1.0")
+			version := "dev"
+			if info, ok := debug.ReadBuildInfo(); ok {
+				version = info.Main.Version
+			}
+			fmt.Printf("appbase CLI %s\n", version)
 		},
 	}
 }
