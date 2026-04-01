@@ -26,6 +26,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -40,7 +41,8 @@ type AppConfig struct {
 	Auth  AuthConfig  `yaml:"auth"`
 	GCP   GCPConfig   `yaml:"gcp"`
 
-	Environments map[string]EnvOverride `yaml:"environments"`
+	Environments map[string]EnvOverride  `yaml:"environments"`
+	Targets      map[string]TargetConfig `yaml:"targets"`
 
 	// resolved values after merging environment + secrets
 	resolved map[string]string
@@ -69,6 +71,22 @@ type AuthConfig struct {
 	AllowedUsers []string          `yaml:"allowed_users"`
 	ExtraScopes  []string          `yaml:"extra_scopes"`
 	Tokens       map[string]string `yaml:"tokens"`
+}
+
+// TargetConfig holds deployment target configuration.
+// Targets describe where and how to deploy — GCP project, region, domain,
+// secrets, and Cloud Run settings. Separate from environments, which control
+// runtime behavior.
+type TargetConfig struct {
+	Type         string            `yaml:"type"`          // "cloudrun" (default)
+	Project      string            `yaml:"project"`       // GCP project ID
+	Region       string            `yaml:"region"`        // e.g. "us-central1"
+	Domain       string            `yaml:"domain"`        // custom domain (stable URL)
+	SupportEmail string            `yaml:"support_email"` // for OAuth consent screen
+	Timeout      int               `yaml:"timeout"`       // Cloud Run timeout seconds
+	Env          map[string]string `yaml:"env"`           // extra env vars, supports ${secret:name}
+	Store        StoreConfig       `yaml:"store"`
+	Auth         AuthConfig        `yaml:"auth"`
 }
 
 // EnvOverride holds per-environment config overrides.
@@ -175,6 +193,55 @@ func (c *AppConfig) GCPProject() string {
 // Region returns the deployment region (from env override or default).
 func (c *AppConfig) Region() string {
 	return c.resolved["region"]
+}
+
+// Target returns the named deployment target. If name is empty:
+//   - Returns the only target if exactly one exists
+//   - Synthesizes a target from environments.production if no targets section exists
+//   - Returns an error if multiple targets exist and no name is specified
+func (c *AppConfig) Target(name string) (*TargetConfig, error) {
+	if len(c.Targets) > 0 {
+		if name == "" {
+			if len(c.Targets) == 1 {
+				for _, t := range c.Targets {
+					return &t, nil
+				}
+			}
+			return nil, fmt.Errorf("multiple targets configured — specify one: %s", strings.Join(c.TargetNames(), ", "))
+		}
+		if t, ok := c.Targets[name]; ok {
+			return &t, nil
+		}
+		return nil, fmt.Errorf("target %q not found (available: %s)", name, strings.Join(c.TargetNames(), ", "))
+	}
+
+	// Backward compat: synthesize from environments.production
+	t := TargetConfig{
+		Type:   "cloudrun",
+		Region: "us-central1",
+	}
+	if prod, ok := c.Environments["production"]; ok {
+		t.Project = prod.Store.GCPProject
+		t.Auth = prod.Auth
+		t.Store = prod.Store
+	}
+	if t.Project == "" {
+		t.Project = c.Store.GCPProject
+	}
+	if t.Store.Type == "" {
+		t.Store.Type = "firestore"
+	}
+	return &t, nil
+}
+
+// TargetNames returns sorted target names.
+func (c *AppConfig) TargetNames() []string {
+	names := make([]string, 0, len(c.Targets))
+	for name := range c.Targets {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
 }
 
 // applyOverride merges a per-environment config on top of the base.

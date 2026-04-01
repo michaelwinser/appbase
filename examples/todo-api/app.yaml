@@ -28,3 +28,15 @@ environments:
       client_secret: ${secret:google-client-secret}
       extra_scopes:
         - https://www.googleapis.com/auth/tasks
+
+targets:
+  production:
+    type: cloudrun
+    project: xwind-appbase
+    region: us-central1
+    support_email: michaelw@xwind.io
+    store:
+      type: firestore
+    auth:
+      client_id: ${secret:google-client-id}
+      client_secret: ${secret:google-client-secret}

@@ -163,7 +163,8 @@ dev_dispatch() {
         lint-api)   appbase lint-api ;;
         ci)         dev_ci ;;
         provision)  shift; appbase provision "$@" ;;
-        deploy)     _load_secrets && appbase deploy ;;
+        deploy)     shift; _load_secrets && appbase deploy "$@" ;;
+        target)     shift; appbase target "$@" ;;
         secret)     shift; appbase secret "$@" ;;
         docker)     appbase docker "${2:-up}" ;;
         help)       dev_help ;;
@@ -188,8 +189,10 @@ Development:
   ci                 Full CI pipeline
 
 Deployment:
-  provision <email>  Full GCP setup
-  deploy             Deploy to Cloud Run
+  target list        List deployment targets
+  target get <name>  Show target config (use --field for scripts)
+  provision [target] Full GCP setup (or: provision <email> for legacy)
+  deploy [target]    Deploy to Cloud Run
   secret <cmd>       Manage secrets (set, get, list, import, push)
   docker [up|down]   Local Docker
 EOF

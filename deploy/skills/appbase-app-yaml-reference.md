@@ -1,7 +1,7 @@
 ---
 name: appbase-app-yaml-reference
-description: "app.yaml configuration reference — all fields, defaults, secret references, environment overrides. Read this instead of exploring config source code."
-trigger: When you need to know what fields app.yaml supports, how to configure auth, store, scopes, tokens, or GCP APIs.
+description: "app.yaml configuration reference — all fields, defaults, secret references, environment overrides, deployment targets. Read this instead of exploring config source code."
+trigger: When you need to know what fields app.yaml supports, how to configure auth, store, scopes, tokens, GCP APIs, or deployment targets.
 ---
 
 # app.yaml Reference
@@ -160,6 +160,55 @@ environments:
 | `environments.<name>.port` | int | Port override |
 | `environments.<name>.store` | StoreConfig | Database override |
 | `environments.<name>.auth` | AuthConfig | Auth override |
+
+## targets
+
+Deployment targets describe where and how to deploy. Separate from `environments`, which control runtime behavior.
+
+```yaml
+targets:
+  production:
+    type: cloudrun
+    project: my-gcp-project
+    region: us-central1
+    domain: myapp.example.com
+    support_email: admin@example.com
+    timeout: 600
+    env:
+      SYNC_KEY: ${secret:sync-key}
+    store:
+      type: firestore
+    auth:
+      client_id: ${secret:google-client-id}
+      client_secret: ${secret:google-client-secret}
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `type` | string | `cloudrun` | Deployment type |
+| `project` | string | required | GCP project ID |
+| `region` | string | `us-central1` | GCP region |
+| `domain` | string | — | Custom domain (stable URL for schedulers, OAuth) |
+| `support_email` | string | — | OAuth consent screen contact |
+| `timeout` | int | — | Cloud Run request timeout in seconds |
+| `env` | map | — | Extra env vars (supports `${secret:name}`) |
+| `store` | StoreConfig | — | Database config for this target |
+| `auth` | AuthConfig | — | Auth config for this target |
+
+**Commands:**
+- `appbase target list` — show configured targets
+- `appbase target get <name>` — show all target fields
+- `appbase target get <name> --field region` — get a single value (for scripts)
+- `appbase provision <target>` — provision infrastructure for the target
+- `appbase deploy <target>` — deploy to the target
+
+**Backward compatibility:** If no `targets` section exists, deploy/provision synthesize a target from `environments.production` and `app.json`. Existing projects work without changes.
+
+**Using target values in ./dev scripts:**
+```sh
+REGION=$(appbase target get production --field region)
+PROJECT=$(appbase target get production --field project)
+```
 
 ## Config priority
 
