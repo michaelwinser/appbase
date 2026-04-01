@@ -34,6 +34,10 @@ var IsLocalMode bool
 // in your setupFn: config.DB.SQLitePath = appcli.LocalDataPath + "/app.db"
 var LocalDataPath string
 
+// cliName is the CLI binary name (from the root command's Use field).
+// Used internally to ensure keychain lookups use the same name as login.
+var cliName string
+
 // Deprecated: Use ClientForCommand with an in-process handler transport instead.
 // AutoServeHandler is set by the app after setup to enable auto-serve.
 // When a CLI command runs without --server, the CLI starts an ephemeral
@@ -87,6 +91,8 @@ func New(name, description string, setupFn func() error) *CLI {
 			}
 		},
 	}
+
+	cliName = name
 
 	c := &CLI{root: root, setupFn: setupFn}
 	c.addBuiltinCommands()

@@ -34,7 +34,8 @@ func (t *handlerTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 // the handler directly. In remote mode, returns a real HTTP client with
 // keychain auth.
 //
-// This replaces the ResolveServerWithAutoServe + AuthenticatedClient pattern.
+// The appName parameter is used in error messages. Keychain lookups use
+// the CLI name from New() to ensure consistency with the login command.
 func ClientForCommand(cmd *cobra.Command, appName string, handler http.Handler) (
 	client *http.Client, baseURL string, cleanup func(), err error,
 ) {
@@ -42,9 +43,15 @@ func ClientForCommand(cmd *cobra.Command, appName string, handler http.Handler) 
 	// rather than comparing resolved URLs, which breaks when the keychain
 	// has a saved server URL or the app uses a non-default port.
 	if !IsLocalMode {
+		// Use cliName for keychain lookups to match what login stored.
+		// Falls back to appName if cliName isn't set (e.g., direct use without New()).
+		keychainName := cliName
+		if keychainName == "" {
+			keychainName = appName
+		}
 		serverFlag, _ := cmd.Flags().GetString("server")
-		serverURL := ResolveServerURL(serverFlag, appName)
-		httpClient, err := AuthenticatedClient(appName)
+		serverURL := ResolveServerURL(serverFlag, keychainName)
+		httpClient, err := AuthenticatedClient(keychainName)
 		if err != nil {
 			return nil, "", nil, fmt.Errorf("not logged in — run: %s login", appName)
 		}
