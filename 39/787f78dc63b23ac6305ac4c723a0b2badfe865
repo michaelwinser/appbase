@@ -1,0 +1,37 @@
+cmd/appbase/target.go
+  0c8409285056e801 1-149
+deploy/dev-template.sh
+  0c8409285056e801 166-167,192-195
+docs/app-yaml-reference.md
+  0c8409285056e801 158-206
+cmd/appbase/main.go
+  0c8409285056e801 54
+deploy/skills/appbase-app-yaml-reference.md
+  0c8409285056e801 3-4
+config/appconfig.go
+  0c8409285056e801 29,44-45,76-91,198-246
+examples/todo-api/app.yaml
+  0c8409285056e801 31-42
+cmd/appbase/deploy.go
+  0c8409285056e801 15,17,23-25,28-31,34-38,40-44,46-48,50-53,55-61,63-68,70-74,76-79,81-89,91-95,97-103,105-107,109-137,139-211,213-242,263,265,267-274,277-279,282-284,287-291,293-295,297-300,302-507,509-510
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.3",
+  "base_commit_sha": "39787f78dc63b23ac6305ac4c723a0b2badfe865",
+  "prompts": {
+    "0c8409285056e801": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f0bc80ee-12c9-4bcf-9618-5d41b2c6dfd0",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser",
+      "messages": [],
+      "total_additions": 737,
+      "total_deletions": 183,
+      "accepted_lines": 736,
+      "overriden_lines": 0
+    }
+  }
+}
