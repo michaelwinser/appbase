@@ -1,0 +1,33 @@
+docs/api-reference.md
+  0c8409285056e801 1-376
+docs/app-yaml-reference.md
+  0c8409285056e801 1-174
+CLAUDE.md
+  0c8409285056e801 309-314
+deploy/skills/appbase-app-yaml-reference.md
+  0c8409285056e801 1-6
+.claude/skills/scaffold-app.md
+  0c8409285056e801 97-104
+deploy/skills/appbase-api-reference.md
+  0c8409285056e801 1-6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.3",
+  "base_commit_sha": "e955ca5fbe329583f337fd99cb75b58b08ce6754",
+  "prompts": {
+    "0c8409285056e801": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f0bc80ee-12c9-4bcf-9618-5d41b2c6dfd0",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser",
+      "messages": [],
+      "total_additions": 576,
+      "total_deletions": 5,
+      "accepted_lines": 576,
+      "overriden_lines": 0
+    }
+  }
+}
