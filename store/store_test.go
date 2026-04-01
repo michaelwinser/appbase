@@ -368,6 +368,71 @@ func TestAutoMigrateColumns(t *testing.T) {
 	}
 }
 
+func TestReadOnlyCollection(t *testing.T) {
+	coll := testCollection(t)
+
+	// Populate via the full collection
+	coll.Create(&testItem{ID: "1", Owner: "alice", Name: "first", Count: 1, Active: true})
+	coll.Create(&testItem{ID: "2", Owner: "alice", Name: "second", Count: 2, Active: false})
+	coll.Create(&testItem{ID: "3", Owner: "bob", Name: "third", Count: 3, Active: true})
+
+	ro := coll.ReadOnly()
+
+	// Get works
+	got, err := ro.Get("1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got == nil || got.Name != "first" {
+		t.Fatalf("expected first, got %v", got)
+	}
+
+	// All works
+	all, err := ro.All()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(all) != 3 {
+		t.Fatalf("expected 3 items, got %d", len(all))
+	}
+
+	// Where + OrderBy + All works
+	items, err := ro.Where("owner", "==", "alice").OrderBy("name", Asc).All()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 2 {
+		t.Fatalf("expected 2 alice items, got %d", len(items))
+	}
+	if items[0].Name != "first" || items[1].Name != "second" {
+		t.Fatalf("unexpected order: %s, %s", items[0].Name, items[1].Name)
+	}
+
+	// First works
+	first, err := ro.Where("owner", "==", "bob").First()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first == nil || first.Name != "third" {
+		t.Fatalf("expected third, got %v", first)
+	}
+
+	// Limit works
+	limited, err := ro.Where("owner", "==", "alice").Limit(1).All()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(limited) != 1 {
+		t.Fatalf("expected 1, got %d", len(limited))
+	}
+
+	// Compile-time check: ReadOnlyCollection does NOT have Create, Update, Delete.
+	// These lines should NOT compile if uncommented:
+	// ro.Create(&testItem{})   // should not compile
+	// ro.Update("1", &testItem{})  // should not compile
+	// ro.Delete("1")           // should not compile
+}
+
 func TestQueryImmutable(t *testing.T) {
 	coll := testCollection(t)
 

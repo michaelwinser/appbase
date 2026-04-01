@@ -115,6 +115,65 @@ func (c *Collection[T]) Delete(id string) error {
 	return c.backend.delete(id)
 }
 
+// ReadOnly returns a read-only view of the collection.
+// The returned value supports Get, All, Where, OrderBy, Limit, and First
+// but not Create, Update, or Delete. Use this to enforce read-only access
+// at the type level for shared/public request handling.
+func (c *Collection[T]) ReadOnly() *ReadOnlyCollection[T] {
+	return &ReadOnlyCollection[T]{coll: c}
+}
+
+// ReadOnlyCollection provides read-only access to a Collection.
+// Write operations (Create, Update, Delete) are not available on this type.
+type ReadOnlyCollection[T any] struct {
+	coll *Collection[T]
+}
+
+// Get retrieves an entity by primary key. Returns nil if not found.
+func (r *ReadOnlyCollection[T]) Get(id string) (*T, error) {
+	return r.coll.Get(id)
+}
+
+// All returns all entities in the collection.
+func (r *ReadOnlyCollection[T]) All() ([]T, error) {
+	return r.coll.All()
+}
+
+// Where starts a read-only query with a filter condition.
+func (r *ReadOnlyCollection[T]) Where(field, op string, value interface{}) *ReadOnlyQuery[T] {
+	return &ReadOnlyQuery[T]{q: r.coll.Where(field, op, value)}
+}
+
+// ReadOnlyQuery is a read-only query builder.
+type ReadOnlyQuery[T any] struct {
+	q *Query[T]
+}
+
+// Where adds an additional filter (AND).
+func (r *ReadOnlyQuery[T]) Where(field, op string, value interface{}) *ReadOnlyQuery[T] {
+	return &ReadOnlyQuery[T]{q: r.q.Where(field, op, value)}
+}
+
+// OrderBy sets the sort order.
+func (r *ReadOnlyQuery[T]) OrderBy(field string, dir Direction) *ReadOnlyQuery[T] {
+	return &ReadOnlyQuery[T]{q: r.q.OrderBy(field, dir)}
+}
+
+// Limit caps the number of results.
+func (r *ReadOnlyQuery[T]) Limit(n int) *ReadOnlyQuery[T] {
+	return &ReadOnlyQuery[T]{q: r.q.Limit(n)}
+}
+
+// All executes the query and returns matching entities.
+func (r *ReadOnlyQuery[T]) All() ([]T, error) {
+	return r.q.All()
+}
+
+// First executes the query and returns the first matching entity, or nil.
+func (r *ReadOnlyQuery[T]) First() (*T, error) {
+	return r.q.First()
+}
+
 // hasColumn returns true if field matches a known store-tagged column name.
 func (m *structMeta) hasColumn(field string) bool {
 	for _, fi := range m.Fields {
