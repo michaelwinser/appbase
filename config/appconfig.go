@@ -59,17 +59,6 @@ type GCPConfig struct {
 	// APIs lists additional GCP APIs the app needs enabled during provisioning.
 	// Infrastructure APIs (Cloud Run, Firestore, etc.) are always enabled.
 	APIs []string `yaml:"apis"`
-	// Scheduler lists Cloud Scheduler jobs to create/update during deploy.
-	Scheduler []SchedulerJob `yaml:"scheduler"`
-}
-
-// SchedulerJob defines a Cloud Scheduler HTTP job targeting a Cloud Run endpoint.
-type SchedulerJob struct {
-	Name     string            `yaml:"name"`
-	Schedule string            `yaml:"schedule"` // cron expression
-	Path     string            `yaml:"path"`     // e.g., /sync/nudge
-	Method   string            `yaml:"method"`   // HTTP method (default: POST)
-	Headers  map[string]string `yaml:"headers"`  // optional headers
 }
 
 // AuthConfig holds authentication configuration.

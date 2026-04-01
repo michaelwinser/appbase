@@ -92,19 +92,10 @@ func deployCmd() *cobra.Command {
 				"--project="+p.GCPProject,
 				"--region="+p.Region,
 				"--format=value(status.url)").Output()
-			serviceURL := ""
 			if err == nil {
-				serviceURL = strings.TrimSpace(string(out))
+				serviceURL := strings.TrimSpace(string(out))
 				if serviceURL != "" {
 					fmt.Printf("\nService URL: %s\n", serviceURL)
-				}
-			}
-
-			// Set up Cloud Scheduler jobs
-			if len(p.SchedulerJobs) > 0 && serviceURL != "" {
-				if err := setupSchedulerJobs(p, serviceURL); err != nil {
-					fmt.Printf("\nWARNING: scheduler setup failed: %v\n", err)
-					fmt.Println("You can retry with: appbase deploy")
 				}
 			}
 
@@ -250,68 +241,6 @@ func provisionCmd() *cobra.Command {
 			return nil
 		},
 	}
-}
-
-func setupSchedulerJobs(p *project, serviceURL string) error {
-	fmt.Printf("\nSetting up %d Cloud Scheduler job(s)...\n", len(p.SchedulerJobs))
-
-	// Ensure scheduler-invoker service account exists
-	saName := p.Name + "-scheduler"
-	saEmail := saName + "@" + p.GCPProject + ".iam.gserviceaccount.com"
-
-	fmt.Printf("  Creating service account %s...\n", saName)
-	exec.Command("gcloud", "iam", "service-accounts", "create", saName,
-		"--project="+p.GCPProject,
-		"--display-name=Cloud Scheduler invoker for "+p.Name,
-		"--quiet").Run() // ignore error if already exists
-
-	// Grant Cloud Run invoker role
-	fmt.Println("  Granting Cloud Run invoker role...")
-	exec.Command("gcloud", "run", "services", "add-iam-policy-binding", p.Name,
-		"--project="+p.GCPProject,
-		"--region="+p.Region,
-		"--member=serviceAccount:"+saEmail,
-		"--role=roles/run.invoker",
-		"--quiet").Run()
-
-	// Create/update each job
-	for _, job := range p.SchedulerJobs {
-		jobName := p.Name + "-" + job.Name
-		targetURL := strings.TrimRight(serviceURL, "/") + job.Path
-
-		fmt.Printf("  Job %s: %s %s [%s]\n", jobName, job.Method, job.Path, job.Schedule)
-
-		// Delete existing job (idempotent recreate)
-		exec.Command("gcloud", "scheduler", "jobs", "delete", jobName,
-			"--project="+p.GCPProject,
-			"--location="+p.Region,
-			"--quiet").Run()
-
-		// Build create command
-		createArgs := []string{
-			"scheduler", "jobs", "create", "http", jobName,
-			"--project=" + p.GCPProject,
-			"--location=" + p.Region,
-			"--schedule=" + job.Schedule,
-			"--uri=" + targetURL,
-			"--http-method=" + job.Method,
-			"--oidc-service-account-email=" + saEmail,
-			"--oidc-token-audience=" + serviceURL,
-			"--quiet",
-		}
-
-		// Add headers
-		for k, v := range job.Headers {
-			createArgs = append(createArgs, "--headers="+k+"="+v)
-		}
-
-		if err := run("gcloud", createArgs...); err != nil {
-			return fmt.Errorf("creating job %s: %w", jobName, err)
-		}
-	}
-
-	fmt.Println("  Scheduler jobs configured.")
-	return nil
 }
 
 func dockerCmd() *cobra.Command {
