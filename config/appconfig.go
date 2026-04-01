@@ -63,11 +63,12 @@ type GCPConfig struct {
 
 // AuthConfig holds authentication configuration.
 type AuthConfig struct {
-	ClientID     string   `yaml:"client_id"`
-	ClientSecret string   `yaml:"client_secret"`
-	RedirectURL  string   `yaml:"redirect_url"`
-	AllowedUsers []string `yaml:"allowed_users"`
-	ExtraScopes  []string `yaml:"extra_scopes"`
+	ClientID     string            `yaml:"client_id"`
+	ClientSecret string            `yaml:"client_secret"`
+	RedirectURL  string            `yaml:"redirect_url"`
+	AllowedUsers []string          `yaml:"allowed_users"`
+	ExtraScopes  []string          `yaml:"extra_scopes"`
+	Tokens       map[string]string `yaml:"tokens"`
 }
 
 // EnvOverride holds per-environment config overrides.
@@ -204,6 +205,9 @@ func (c *AppConfig) applyOverride(env EnvOverride) {
 	}
 	if len(env.Auth.ExtraScopes) > 0 {
 		c.Auth.ExtraScopes = env.Auth.ExtraScopes
+	}
+	if len(env.Auth.Tokens) > 0 {
+		c.Auth.Tokens = env.Auth.Tokens
 	}
 }
 

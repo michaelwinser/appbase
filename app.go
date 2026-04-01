@@ -5,6 +5,7 @@
 package appbase
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -25,6 +26,7 @@ type App struct {
 	db        *db.DB
 	sessions  *auth.SessionStore
 	google    *auth.GoogleAuth
+	tokenAuth *auth.TokenAuth
 	server    *server.Server
 	cliLogins *auth.CLILoginStore
 	name      string
@@ -38,6 +40,12 @@ type Config struct {
 
 	// GoogleAuth configures Google OAuth. Nil to use defaults.
 	GoogleAuth *auth.GoogleAuthConfig
+
+	// TokenAuth configures static token authentication.
+	// Provides a lightweight auth option that works without any third-party
+	// setup (no GCP, no SMTP). Creates real sessions through the standard
+	// session pipeline. Nil to use defaults from app.yaml or AUTH_TOKENS env.
+	TokenAuth *auth.TokenAuthConfig
 
 	// Quiet suppresses startup log messages (config loading, preflight, etc.).
 	// Useful for CLI commands where log noise is unwanted.
@@ -84,6 +92,7 @@ func New(config Config) (*App, error) {
 	}
 
 	// Load app.yaml if present — merge into config (explicit fields win)
+	var appCfg *appconfig.AppConfig
 	configPath := "app.yaml"
 	if _, err := os.Stat(configPath); err == nil {
 		gcpProject := config.DB.GCPProject
@@ -100,7 +109,8 @@ func New(config Config) (*App, error) {
 				&appconfig.EnvFileResolver{},
 			)
 		}
-		appCfg, err := appconfig.LoadAppConfig(configPath, secrets)
+		var err error
+		appCfg, err = appconfig.LoadAppConfig(configPath, secrets)
 		if err != nil {
 			log.Printf("Warning: could not load app.yaml: %v", err)
 		} else {
@@ -142,6 +152,15 @@ func New(config Config) (*App, error) {
 				// Append YAML scopes to any app-provided scopes
 				config.GoogleAuth.ExtraScopes = append(config.GoogleAuth.ExtraScopes, appCfg.Auth.ExtraScopes...)
 			}
+			// Merge token auth from YAML
+			if len(appCfg.Auth.Tokens) > 0 {
+				if config.TokenAuth == nil {
+					config.TokenAuth = &auth.TokenAuthConfig{}
+				}
+				if len(config.TokenAuth.Tokens) == 0 {
+					config.TokenAuth.Tokens = appCfg.Auth.Tokens
+				}
+			}
 			log.Printf("Loaded config from app.yaml (env: %s)", appCfg.Env())
 		}
 	}
@@ -171,6 +190,13 @@ func New(config Config) (*App, error) {
 		googleConfig = *config.GoogleAuth
 	}
 	google := auth.NewGoogleAuth(sessions, googleConfig)
+
+	// Initialize Token Auth (nil if not configured)
+	tokenConfig := auth.TokenAuthConfig{}
+	if config.TokenAuth != nil {
+		tokenConfig = *config.TokenAuth
+	}
+	tokenAuth := auth.NewTokenAuth(sessions, tokenConfig)
 
 	// Initialize server
 	srv := server.New(server.Config{
@@ -206,6 +232,7 @@ func New(config Config) (*App, error) {
 		db:        database,
 		sessions:  sessions,
 		google:    google,
+		tokenAuth: tokenAuth,
 		server:    srv,
 		cliLogins: auth.NewCLILoginStore(),
 		name:      name,
@@ -423,6 +450,62 @@ func (a *App) registerAuthRoutes() {
 		})
 	})
 
+	// Token login — lightweight auth without OAuth.
+	r.Post("/api/auth/token-login", func(w http.ResponseWriter, r *http.Request) {
+		if a.tokenAuth == nil || !a.tokenAuth.IsConfigured() {
+			server.RespondError(w, http.StatusServiceUnavailable, "token auth not configured")
+			return
+		}
+
+		// Support both JSON and form-encoded
+		var token string
+		contentType := r.Header.Get("Content-Type")
+		if strings.Contains(contentType, "application/json") {
+			var req struct {
+				Token string `json:"token"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&req); err == nil {
+				token = req.Token
+			}
+		} else {
+			r.ParseForm()
+			token = r.FormValue("token")
+		}
+
+		if token == "" {
+			server.RespondError(w, http.StatusBadRequest, "token is required")
+			return
+		}
+
+		result, err := a.tokenAuth.HandleLogin(token)
+		if err != nil {
+			server.RespondError(w, http.StatusUnauthorized, "invalid token")
+			return
+		}
+
+		// Set session cookie (same as Google OAuth)
+		http.SetCookie(w, &http.Cookie{
+			Name:     auth.CookieName,
+			Value:    result.Session.ID,
+			Path:     "/",
+			MaxAge:   30 * 24 * 60 * 60,
+			HttpOnly: true,
+			SameSite: http.SameSiteLaxMode,
+			Secure:   r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https",
+		})
+
+		// Form submissions: redirect to /
+		if !strings.Contains(contentType, "application/json") {
+			http.Redirect(w, r, "/", http.StatusFound)
+			return
+		}
+
+		server.RespondJSON(w, http.StatusOK, map[string]interface{}{
+			"loggedIn": true,
+			"email":    result.Email,
+		})
+	})
+
 	// Logout
 	r.Post("/api/auth/logout", func(w http.ResponseWriter, r *http.Request) {
 		if cookie, err := r.Cookie(auth.CookieName); err == nil && cookie.Value != "" {
@@ -439,7 +522,7 @@ func (a *App) registerAuthRoutes() {
 func (a *App) LoginPage(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if auth.UserID(r) == "" {
-			auth.ServeLoginPage(w, r, a.name, a.google)
+			auth.ServeLoginPage(w, r, a.name, a.google, a.tokenAuth)
 			return
 		}
 		if next != nil {
