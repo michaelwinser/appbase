@@ -11,12 +11,21 @@ import (
 
 // project holds the merged config from app.yaml and app.json in cwd.
 type project struct {
-	Name       string
-	GCPProject string
-	Region     string
-	Port       int
-	URLs       []string
-	GCPAPIs    []string // additional GCP APIs from app.yaml gcp.apis
+	Name          string
+	GCPProject    string
+	Region        string
+	Port          int
+	URLs          []string
+	GCPAPIs       []string       // additional GCP APIs from app.yaml gcp.apis
+	SchedulerJobs []schedulerJob // Cloud Scheduler jobs from app.yaml gcp.scheduler
+}
+
+type schedulerJob struct {
+	Name     string
+	Schedule string
+	Path     string
+	Method   string
+	Headers  map[string]string
 }
 
 // loadProject reads project config from cwd.
@@ -54,7 +63,14 @@ func loadFromYAML(path string) (*project, error) {
 			GCPProject string `yaml:"gcp_project"`
 		} `yaml:"store"`
 		GCP struct {
-			APIs []string `yaml:"apis"`
+			APIs      []string `yaml:"apis"`
+			Scheduler []struct {
+				Name     string            `yaml:"name"`
+				Schedule string            `yaml:"schedule"`
+				Path     string            `yaml:"path"`
+				Method   string            `yaml:"method"`
+				Headers  map[string]string `yaml:"headers"`
+			} `yaml:"scheduler"`
 		} `yaml:"gcp"`
 		Environments map[string]struct {
 			URL   string `yaml:"url"`
@@ -93,6 +109,19 @@ func loadFromYAML(path string) (*project, error) {
 		p.Region = "us-central1"
 	}
 	p.GCPAPIs = cfg.GCP.APIs
+	for _, j := range cfg.GCP.Scheduler {
+		method := j.Method
+		if method == "" {
+			method = "POST"
+		}
+		p.SchedulerJobs = append(p.SchedulerJobs, schedulerJob{
+			Name:     j.Name,
+			Schedule: j.Schedule,
+			Path:     j.Path,
+			Method:   method,
+			Headers:  j.Headers,
+		})
+	}
 	return p, nil
 }
 

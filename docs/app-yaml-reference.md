@@ -61,13 +61,43 @@ Database configuration. Applies to all environments unless overridden.
 
 ## gcp
 
-GCP-specific configuration for provisioning.
+GCP-specific configuration for provisioning and deploy.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `gcp.apis` | [string] | — | Additional GCP APIs to enable during `appbase provision` |
+| `gcp.scheduler` | [SchedulerJob] | — | Cloud Scheduler jobs to create during `appbase deploy` |
 
-Infrastructure APIs (Cloud Run, Firestore, etc.) are always enabled. This field is for app-specific APIs like `tasks.googleapis.com` or `calendar-json.googleapis.com`.
+Infrastructure APIs (Cloud Run, Firestore, etc.) are always enabled. The `apis` field is for app-specific APIs like `tasks.googleapis.com` or `calendar-json.googleapis.com`.
+
+### Cloud Scheduler jobs
+
+Declarative Cloud Scheduler HTTP jobs that target Cloud Run endpoints. Created/updated automatically during `appbase deploy`.
+
+```yaml
+gcp:
+  apis:
+    - cloudscheduler.googleapis.com
+  scheduler:
+    - name: sync-nudge
+      schedule: "*/5 * * * *"
+      path: /sync/nudge
+      method: POST
+      headers:
+        X-Nudge-Key: my-secret-key
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `name` | string | required | Job name (prefixed with app name: `myapp-sync-nudge`) |
+| `schedule` | string | required | Cron expression |
+| `path` | string | required | HTTP path on the Cloud Run service |
+| `method` | string | `POST` | HTTP method |
+| `headers` | map | — | Optional HTTP headers |
+
+Deploy automatically:
+1. Creates a `{appname}-scheduler` service account with `roles/run.invoker`
+2. Creates each job with OIDC auth targeting the deployed service URL
 
 ## auth
 
