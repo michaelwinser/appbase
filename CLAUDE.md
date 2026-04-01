@@ -306,11 +306,12 @@ When working on appbase:
 
 When working on an app that uses appbase:
 
-1. **Don't modify appbase directly** — if you need something new, discuss adding it to appbase as a feature
-2. **Your domain entities and store are yours** — appbase provides the connection, you provide the CRUD
-3. **Use `appbase.UserID(r)` for auth** — don't roll your own session handling
-4. **Migrations are yours** — appbase runs them, you write them
-5. **Frontend tooling in devcontainer** — never install Node/npm on the host, use `./dev frontend <cmd>`
+1. **Read the reference docs first** — `docs/api-reference.md` and `docs/app-yaml-reference.md` have the complete API surface. Do NOT explore appbase source code to learn the API.
+2. **Don't modify appbase directly** — if you need something new, discuss adding it to appbase as a feature
+3. **Your domain entities and store are yours** — appbase provides the connection, you provide the CRUD
+4. **Use `appbase.UserID(r)` for auth** — don't roll your own session handling
+5. **Migrations are automatic** — `store.Collection` auto-migrates new columns
+6. **Use mise for toolchain** — run `mise install` for Go, Node, pnpm. Devcontainers also work.
 
 ## Environment Variables
 

@@ -94,6 +94,14 @@ Uses mise for toolchain (`mise install`). Run `pnpm` commands via `./dev fronten
 - **Auth in handlers:** `appbase.UserID(r)`, `appbase.Email(r)`
 - **Testing:** Set `APPBASE_TEST_MODE=true`, use `X-Test-User` header
 - **Desktop:** Use `app.LocalHandler()` with Wails
+
+## appbase Reference
+
+For appbase API documentation, read these files (do NOT explore appbase source code):
+- `docs/api-reference.md` in the appbase repo — complete API surface
+- `docs/app-yaml-reference.md` in the appbase repo — app.yaml configuration
+- Run `appbase help` for available CLI commands
+- Use `/api-first`, `/add-entity`, `/scaffold-app` skills for guided workflows
 ```
 
 ### 4. Create app.yaml
