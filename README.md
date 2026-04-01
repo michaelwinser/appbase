@@ -228,6 +228,52 @@ Provisioning enables 5 infrastructure APIs automatically. App-specific APIs (Tas
 
 Secrets flow: OS keychain (local) -> GCP Secret Manager (Cloud Run). Never stored as plaintext on disk.
 
+## Extending ./dev for custom steps
+
+The `./dev` script sources shared functions from appbase but your project controls the dispatch. Override any command by adding a `case` entry **before** the fallthrough:
+
+```sh
+#!/bin/sh
+set -e
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
+
+eval "$(appbase dev-template)"
+APP_BINARY_NAME="myapp"
+
+case "${1:-help}" in
+    # Custom deploy: run appbase deploy, then set up Cloud Scheduler
+    deploy)
+        _load_secrets
+        appbase deploy
+        setup_scheduler
+        ;;
+
+    # Custom provision: run appbase provision, then enable extra APIs
+    provision)
+        appbase provision "$2"
+        gcloud services enable cloudscheduler.googleapis.com --project="$(appbase_project)"
+        ;;
+
+    # All other commands use the shared defaults
+    *)  dev_dispatch "$@" ;;
+esac
+
+# --- App-specific functions ---
+
+setup_scheduler() {
+    # Create service account, grant invoker, create scheduler job
+    # ... app-specific gcloud commands ...
+}
+```
+
+**Key patterns:**
+- `_load_secrets` — loads secrets from keychain before deploy
+- `appbase deploy` — the standard Cloud Run deploy (call this first)
+- Post-deploy steps run after the service is live (scheduler jobs, cache warming, DNS, etc.)
+- Pre-provision steps run before or after `appbase provision` (extra APIs, custom resources)
+- App-specific GCP APIs go in `app.yaml` under `gcp.apis` — provisioned automatically
+
 ## Examples
 
 | Example | Pattern | What it demonstrates |

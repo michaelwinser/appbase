@@ -359,6 +359,37 @@ These are registered automatically by `appbase.New()`:
 | POST | `/api/auth/cli-login` | CLI login initiation |
 | GET | `/api/auth/cli-poll` | CLI login polling |
 
+## Extending ./dev for custom provisioning and deploy
+
+appbase handles infrastructure provisioning (Cloud Run, Firestore, secrets) and standard deploy. App-specific steps (Cloud Scheduler, Pub/Sub, custom DNS) are added by overriding commands in your `./dev` script:
+
+```sh
+case "${1:-help}" in
+    deploy)
+        _load_secrets
+        appbase deploy              # standard Cloud Run deploy
+        setup_scheduler             # your post-deploy step
+        ;;
+    provision)
+        appbase provision "$2"      # standard GCP setup
+        enable_extra_apis           # your extra APIs
+        ;;
+    *)  dev_dispatch "$@" ;;
+esac
+```
+
+**What goes in appbase vs your ./dev:**
+
+| Concern | Where | How |
+|---------|-------|-----|
+| Cloud Run, Firestore, secrets | `appbase deploy` | Automatic |
+| App-specific GCP APIs | `app.yaml` `gcp.apis` | Declared, provisioned automatically |
+| OAuth scopes | `app.yaml` `auth.extra_scopes` | Declared, requested during login |
+| Cloud Scheduler, Pub/Sub, etc. | Your `./dev` script | Override `deploy` case |
+| Custom provisioning | Your `./dev` script | Override `provision` case |
+
+The `_load_secrets` helper (from dev-template) loads keychain secrets into env vars before deploy.
+
 ## Environment variables
 
 | Variable | Purpose | Default |
