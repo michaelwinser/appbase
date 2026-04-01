@@ -1,0 +1,25 @@
+README.md
+  0c8409285056e801 231-276
+docs/api-reference.md
+  0c8409285056e801 362-392
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.3",
+  "base_commit_sha": "0bee65c4bd90e7ef27c0faa487fc5b2fcffcbed3",
+  "prompts": {
+    "0c8409285056e801": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f0bc80ee-12c9-4bcf-9618-5d41b2c6dfd0",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser",
+      "messages": [],
+      "total_additions": 83,
+      "total_deletions": 0,
+      "accepted_lines": 83,
+      "overriden_lines": 0
+    }
+  }
+}
