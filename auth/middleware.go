@@ -80,7 +80,15 @@ func TestMode() bool {
 // For non-exempt API paths, it rejects requests without a valid session.
 //
 // When APPBASE_TEST_MODE=true, also accepts X-Test-User header as identity.
-func Middleware(sessions *SessionStore, exemptPrefixes []string) func(http.Handler) http.Handler {
+//
+// If google is non-nil and a session's access token is expired but a refresh
+// token is available, the middleware transparently refreshes the token and
+// updates the session before populating the context.
+func Middleware(sessions *SessionStore, exemptPrefixes []string, google ...* GoogleAuth) func(http.Handler) http.Handler {
+	var googleAuth *GoogleAuth
+	if len(google) > 0 {
+		googleAuth = google[0]
+	}
 	if exemptPrefixes == nil {
 		exemptPrefixes = []string{"/api/auth/", "/health"}
 	}
@@ -126,6 +134,14 @@ func Middleware(sessions *SessionStore, exemptPrefixes []string) func(http.Handl
 						MaxAge: -1, HttpOnly: true,
 					})
 				} else if session != nil {
+					// Transparently refresh expired access token if possible
+					if session.TokenExpired() && session.RefreshToken != "" && googleAuth != nil {
+						if newToken, err := googleAuth.RefreshAccessToken(r.Context(), session); err == nil {
+							session.AccessToken = newToken
+							// session.TokenExpiry and session.RefreshToken updated by RefreshAccessToken
+						}
+					}
+
 					ctx := context.WithValue(r.Context(), userIDKey, session.UserID)
 					ctx = context.WithValue(ctx, emailKey, session.Email)
 					ctx = context.WithValue(ctx, accessTokenKey, session.AccessToken)

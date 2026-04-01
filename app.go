@@ -215,7 +215,7 @@ func New(config Config) (*App, error) {
 		// DevAuth runs first — populates context if AUTH_MODE=dev (no-op otherwise)
 		// Regular auth runs second — sees the populated context and passes through
 		srv.Router().Use(auth.DevAuthMiddleware(sessions))
-		srv.Router().Use(auth.Middleware(sessions, nil))
+		srv.Router().Use(auth.Middleware(sessions, nil, google))
 	}
 
 	// Health endpoint
