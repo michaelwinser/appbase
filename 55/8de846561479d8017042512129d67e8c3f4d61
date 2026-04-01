@@ -1,0 +1,29 @@
+cmd/appbase/deploy.go
+  0c8409285056e801 95,97,103-107,255-316
+cmd/appbase/project.go
+  0c8409285056e801 14-28,66-73,112-124
+config/appconfig.go
+  0c8409285056e801 62-72
+docs/app-yaml-reference.md
+  0c8409285056e801 64,69,71-100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.3",
+  "base_commit_sha": "558de846561479d8017042512129d67e8c3f4d61",
+  "prompts": {
+    "0c8409285056e801": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f0bc80ee-12c9-4bcf-9618-5d41b2c6dfd0",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Michael Winser",
+      "messages": [],
+      "total_additions": 157,
+      "total_deletions": 10,
+      "accepted_lines": 157,
+      "overriden_lines": 0
+    }
+  }
+}
