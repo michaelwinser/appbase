@@ -18,6 +18,12 @@ var DevTemplate string
 //go:embed sandbox-template.sh
 var SandboxTemplate string
 
+// SandboxFlagsTemplate is the starter sandbox.flags file, embedded at build time.
+// Written alongside ./sandbox so projects have a place for custom nono flags.
+//
+//go:embed sandbox-flags-template.sh
+var SandboxFlagsTemplate string
+
 // skillsFS holds the embedded consumer-facing skills.
 //
 //go:embed skills/*.md

@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/michaelwinser/appbase/deploy"
@@ -49,10 +50,10 @@ func updateCmd() *cobra.Command {
 				suggestions++
 			}
 
-			// 4. Check for ./sandbox script
-			if result := checkSandbox(dryRun); result != "" {
+			// 4. Update ./sandbox script (overwrite boilerplate, preserve sandbox.flags)
+			if result := updateSandbox(dryRun); result != "" {
 				fmt.Println(result)
-				suggestions++
+				updated++
 			}
 
 			// 5. Update Claude Code skills
@@ -164,12 +165,93 @@ func checkMiseToml(dryRun bool) string {
 		"           Create one for toolchain management: mise use go node \"npm:pnpm\""
 }
 
-func checkSandbox(dryRun bool) string {
-	if _, err := os.Stat("sandbox"); err == nil {
-		return "" // already exists
+// updateSandbox manages ./sandbox as a fully-overwritten file.
+// Project-specific flags live in ./sandbox.flags, which is never touched
+// once it exists. Legacy scripts with inlined flags are migrated.
+func updateSandbox(dryRun bool) string {
+	existing, err := os.ReadFile("sandbox")
+	if err != nil {
+		// No sandbox script — leave as suggestion (don't force nono on everyone)
+		fmt.Println("  suggest: no ./sandbox script found.\n" +
+			"           Create one: appbase sandbox-template > sandbox && chmod +x sandbox")
+		return ""
 	}
-	return "  suggest: no ./sandbox script found.\n" +
-		"           Create one: appbase sandbox-template > sandbox && chmod +x sandbox"
+
+	if string(existing) == deploy.SandboxTemplate {
+		return "" // already current
+	}
+
+	// Migrate inlined flags to sandbox.flags if needed
+	migrateMsg := ""
+	if _, err := os.Stat("sandbox.flags"); err != nil {
+		flags := extractSandboxFlags(string(existing))
+		content := deploy.SandboxFlagsTemplate
+		if len(flags) > 0 {
+			content = "# Project-specific nono sandbox capabilities.\n" +
+				"# Sourced by ./sandbox — edit this file, not ./sandbox.\n\n" +
+				strings.Join(flags, "\n") + "\n"
+			migrateMsg = fmt.Sprintf(" (migrated %d flags to sandbox.flags)", len(flags))
+		}
+		if dryRun {
+			fmt.Printf("  would create: sandbox.flags%s\n", migrateMsg)
+		} else {
+			if err := os.WriteFile("sandbox.flags", []byte(content), 0644); err != nil {
+				return fmt.Sprintf("  error: writing sandbox.flags: %v", err)
+			}
+		}
+	}
+
+	if dryRun {
+		return "  would update: ./sandbox (regenerate from template)"
+	}
+	if err := os.WriteFile("sandbox", []byte(deploy.SandboxTemplate), 0755); err != nil {
+		return fmt.Sprintf("  error: writing sandbox: %v", err)
+	}
+	return "  updated: ./sandbox regenerated from template" + migrateMsg
+}
+
+// extractSandboxFlags pulls project-specific nono flags from a legacy
+// sandbox script for migration to sandbox.flags. It captures both
+// inlined flags in the exec line and APP_FLAGS= assignments, skipping
+// the standard $PROJECT_DIR allow that the template already provides.
+func extractSandboxFlags(script string) []string {
+	var out []string
+	seen := make(map[string]bool)
+
+	// nono flags with their argument: --allow PATH, --read PATH, --allow-bind PORT
+	flagRe := regexp.MustCompile(`--(?:allow|read|allow-bind)\s+("[^"]*"|\$[A-Za-z_][A-Za-z0-9_]*|[^\s\\]+)`)
+
+	for _, line := range strings.Split(script, "\n") {
+		trimmed := strings.TrimSpace(line)
+
+		// Skip comments
+		if strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+
+		// Already-correct APP_FLAGS lines: keep verbatim
+		if strings.HasPrefix(trimmed, "APP_FLAGS=") && trimmed != `APP_FLAGS=""` {
+			if !seen[trimmed] {
+				out = append(out, trimmed)
+				seen[trimmed] = true
+			}
+			continue
+		}
+
+		// Inlined flags (e.g. in the `exec nono run \` block)
+		for _, m := range flagRe.FindAllString(line, -1) {
+			// Skip standard flags the template already provides
+			if strings.Contains(m, "$PROJECT_DIR") || strings.Contains(m, "$GO_BIN_DIR") {
+				continue
+			}
+			emit := fmt.Sprintf(`APP_FLAGS="$APP_FLAGS %s"`, m)
+			if !seen[emit] {
+				out = append(out, emit)
+				seen[emit] = true
+			}
+		}
+	}
+	return out
 }
 
 func updateSkills(dryRun bool) string {
