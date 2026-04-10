@@ -293,58 +293,84 @@ func (g *GoogleAuth) SetSessionCookie(w http.ResponseWriter, r *http.Request, se
 	})
 }
 
-// RefreshAccessToken uses the refresh token to get a new access token from Google.
-// Updates both the session store and the in-memory session object.
-// Returns the new access token.
-func (g *GoogleAuth) RefreshAccessToken(ctx context.Context, session *Session) (string, error) {
-	if session.RefreshToken == "" {
-		return "", fmt.Errorf("no refresh token available")
+// ExchangeRefreshToken performs the OAuth refresh_token grant against Google
+// and returns the new access token, the effective refresh token, and its expiry.
+//
+// If Google rotates the refresh token, the rotated value is returned; otherwise
+// the input refreshToken is returned unchanged. Callers are responsible for
+// persisting the returned refresh token to their own store.
+//
+// This is the lower-level entry point for callers (e.g. background jobs) that
+// hold a refresh token outside the session store and just need a fresh access
+// token. For session-backed callers, use RefreshAccessToken.
+func (g *GoogleAuth) ExchangeRefreshToken(ctx context.Context, refreshToken string) (access, newRefresh string, expiry time.Time, err error) {
+	if refreshToken == "" {
+		return "", "", time.Time{}, fmt.Errorf("no refresh token available")
 	}
 
 	data := url.Values{}
 	data.Set("client_id", g.clientID)
 	data.Set("client_secret", g.clientSecret)
-	data.Set("refresh_token", session.RefreshToken)
+	data.Set("refresh_token", refreshToken)
 	data.Set("grant_type", "refresh_token")
 
 	req, err := http.NewRequestWithContext(ctx, "POST", "https://oauth2.googleapis.com/token", strings.NewReader(data.Encode()))
 	if err != nil {
-		return "", err
+		return "", "", time.Time{}, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, err := g.httpClient.Do(req)
 	if err != nil {
-		return "", err
+		return "", "", time.Time{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("token refresh failed: %s", string(body))
+		return "", "", time.Time{}, fmt.Errorf("token refresh failed: %s", string(body))
 	}
 
 	var tokens tokenResponse
 	if err := json.NewDecoder(resp.Body).Decode(&tokens); err != nil {
-		return "", err
+		return "", "", time.Time{}, err
 	}
 
-	// Google sometimes rotates refresh tokens
-	newRefresh := session.RefreshToken
+	// Google sometimes rotates refresh tokens; preserve the input if not.
+	newRefresh = refreshToken
 	if tokens.RefreshToken != "" {
 		newRefresh = tokens.RefreshToken
 	}
 
-	tokenExpiry := time.Now().Add(time.Duration(tokens.ExpiresIn) * time.Second)
-	if err := g.sessions.UpdateTokens(session.ID, tokens.AccessToken, newRefresh, tokenExpiry); err != nil {
-		return "", fmt.Errorf("storing refreshed token: %w", err)
+	expiry = time.Now().Add(time.Duration(tokens.ExpiresIn) * time.Second)
+	return tokens.AccessToken, newRefresh, expiry, nil
+}
+
+// RefreshAccessToken uses the session's refresh token to get a new access token
+// from Google. Updates both the session store (when session.ID is set) and the
+// in-memory session struct. Returns the new access token.
+//
+// Sessions with an empty ID are treated as transient: the in-memory struct is
+// updated but no store write is attempted. This supports callers that construct
+// a Session as a parameter bag for the OAuth exchange, though ExchangeRefreshToken
+// is the cleaner API for that use case.
+func (g *GoogleAuth) RefreshAccessToken(ctx context.Context, session *Session) (string, error) {
+	access, newRefresh, expiry, err := g.ExchangeRefreshToken(ctx, session.RefreshToken)
+	if err != nil {
+		return "", err
 	}
 
-	session.AccessToken = tokens.AccessToken
-	session.RefreshToken = newRefresh
-	session.TokenExpiry = tokenExpiry
+	if session.ID != "" {
+		if err := g.sessions.UpdateTokens(session.ID, access, newRefresh, expiry); err != nil {
+			return "", fmt.Errorf("storing refreshed token: %w", err)
+		}
+	}
 
-	return tokens.AccessToken, nil
+	session.AccessToken = access
+	session.RefreshToken = newRefresh
+	session.TokenExpiry = expiry
+
+	return access, nil
 }
 
 // ClearSessionCookie clears the session cookie.
