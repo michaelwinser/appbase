@@ -44,14 +44,6 @@ mkdir -p "$DOCKER_DIR" 2>/dev/null
 [ -f "$DOCKER_DIR/config.json" ] || echo '{}' > "$DOCKER_DIR/config.json"
 export DOCKER_CONFIG="$DOCKER_DIR"
 
-# --- Interactive detection ---
-EXEC_FLAG=""
-case "$1" in
-    claude|bash|zsh|sh|vim|nvim)
-        EXEC_FLAG="--exec"  # Preserve TTY for interactive apps
-        ;;
-esac
-
 # --- Build sandbox flags ---
 GO_FLAG=""
 if [ -n "$GO_BIN_DIR" ] && [ "$GO_BIN_DIR" != "/usr/bin" ]; then
@@ -75,5 +67,4 @@ exec nono run \
     --allow "$PROJECT_DIR" \
     $GO_FLAG \
     $APP_FLAGS \
-    $EXEC_FLAG \
     -- "$@"
